@@ -71,6 +71,11 @@ Credentials are never written in the file — only the name of the environment
 variable holding one. A provider with no credential is read unauthenticated, and
 the report says so.
 
+`scheme` is `none`, `bearer`, `basic`, `apikey`, or `header`. Use `header` when
+the value arrives already rendered — from a vendor's CLI, a credential helper or
+a token broker: it is sent verbatim, so there is nothing for the suite and
+whatever produced it to disagree about.
+
 `just plan` prints exactly what the file resolves to — which areas run against
 which provider, where each report lands, and which credentials are missing from
 your environment — without making a single request. Run it after any edit.

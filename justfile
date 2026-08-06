@@ -5,11 +5,11 @@
 
 config := if path_exists("config.yaml") == "true" { "config.yaml" } else { "config.example.yaml" }
 
-# INTERNAL USE ONLY — see the `publish-hugo` recipe at the bottom of this file.
-# Everything above it is for anybody running the suite; this one path publishes
-# Vulnetix's own results into a Vulnetix repository that is not part of this
-# project, and is useless to anyone else.
+# INTERNAL USE ONLY — see the recipes at the bottom of this file. Everything
+# above them is for anybody running the suite; those two paths wire it to
+# Vulnetix's own CLI and documentation site, and are useless to anyone else.
 hugo_docs := env("VULNETIX_CLI_TEA_DOCS", "../cli/website/content/docs/tea")
+credential_tool := "./tools/vulnetix-credential"
 
 _default:
     @just --list
@@ -59,8 +59,54 @@ fetch-specs:
 
 # ─── INTERNAL USE ONLY ──────────────────────────────────────────────────────
 #
+# Both recipes below wire this suite to Vulnetix's own tooling. They are not
+# part of using the suite: no test touches them, no other recipe depends on
+# them, and someone testing a different provider should ignore them entirely.
+#
+# ── Credentials ─────────────────────────────────────────────────────────────
+#
+# The Vulnetix CLI already knows how to authenticate. It resolves a credential
+# from six sources in precedence order, any of which may keep the secret in the
+# OS keychain rather than on disk, and renders one of three header shapes from
+# it. Rather than copy that here — where it would drift, and where a drifted
+# copy fails as a 401 that reads like the provider's fault — these recipes ask
+# the CLI's own package for the finished Authorization header.
+#
+# The provider entry that consumes it uses `scheme: header`, which sends the
+# value verbatim. There is then nothing left to disagree about: whichever method
+# the CLI is authenticated with, the suite sends exactly what the CLI would.
+#
+#   eval "$(just vulnetix-env)"     # set it in this shell
+#   just run-authed vulnetix        # or set it for one run and no longer
+#
+# The value is printed to stdout and never logged, so it stays inside a command
+# substitution instead of landing in a scrollback buffer.
+
+# INTERNAL: print the Vulnetix CLI's credential as an Authorization header.
+vulnetix-credential:
+    @cd {{credential_tool}} && go run . -v
+
+# Usage: eval "$(just vulnetix-env)"
+
+# INTERNAL: print an export line for TEA_VULNETIX_CREDENTIAL.
+vulnetix-env:
+    @cd {{credential_tool}} && go run . -export
+
+# The credential is set for this command only, so it never persists in a shell
+# that outlives the run.
+
+# INTERNAL: run against a provider using the Vulnetix CLI's credential.
+run-authed provider="vulnetix":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cred="$(cd {{credential_tool}} && go run . -v)"
+    TEA_VULNETIX_CREDENTIAL="$cred" \
+      go run ./cmd/tea-conformance --config {{config}} --provider {{provider}}
+
+# ── Documentation ───────────────────────────────────────────────────────────
+#
 # Publishes a recorded run into the Vulnetix CLI documentation site, which is a
-# separate private repository. It is here rather than there because the report
+# separate repository. It is here rather than there because the report
 # format belongs to this suite: when a section is renamed the recipe that maps
 # it onto Hugo pages should move in the same commit.
 #
@@ -70,8 +116,8 @@ fetch-specs:
 # Markdown in `reports/<provider>/reports/` and do whatever your own site needs.
 #
 # It writes into ../cli, which is another working copy on this machine. Override
-# with VULNETIX_CLI_TEA_DOCS. Nothing is committed or pushed — the CLI repo has
-# its own review and release process, and this only stages the files for it.
+# with VULNETIX_CLI_TEA_DOCS. Nothing is committed or pushed — the CLI repository
+# has its own review and release process, and this only stages the files for it.
 #
 #   just publish-hugo                       # from reports/vulnetix
 #   just publish-hugo reports/vulnetix      # explicit

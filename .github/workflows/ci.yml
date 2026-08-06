@@ -38,3 +38,10 @@ jobs:
       # The configuration shipped in the repository must resolve. This makes no
       # network requests and needs no credentials.
       - run: go run ./cmd/tea-conformance --config config.example.yaml --plan
+
+      # tools/ holds its own go.mod so its dependencies stay out of the suite's,
+      # which also means `go build ./...` above never sees it. Built here so it
+      # cannot rot unnoticed.
+      - name: build the internal credential bridge
+        working-directory: tools/vulnetix-credential
+        run: go build ./... && go vet ./...

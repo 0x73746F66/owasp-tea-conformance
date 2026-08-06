@@ -123,6 +123,42 @@ func TestResolveNarrowsByProviderAndArea(t *testing.T) {
 	}
 }
 
+func TestAuthHeaderRendersEachScheme(t *testing.T) {
+	cases := []struct {
+		scheme     string
+		credential string
+		want       string
+	}{
+		{AuthBearer, "tok", "Bearer tok"},
+		{AuthAPIKey, "org:hex", "ApiKey org:hex"},
+		{AuthBasic, "user:pass", "Basic dXNlcjpwYXNz"},
+		// Already base64: passed through rather than encoded twice.
+		{AuthBasic, "dXNlcjpwYXNz", "Basic dXNlcjpwYXNz"},
+		// The escape hatch: whatever produced the value already rendered it, so
+		// the suite must not take it apart and put it back together.
+		{AuthHeader, "ApiKey org:hex", "ApiKey org:hex"},
+		{AuthHeader, "Bearer tok", "Bearer tok"},
+		{AuthNone, "ignored", ""},
+	}
+	for _, tc := range cases {
+		r := Resolved{Credential: tc.credential}
+		r.Auth.Scheme = tc.scheme
+		if got := r.AuthHeader(); got != tc.want {
+			t.Errorf("scheme %q with credential %q rendered %q, expected %q",
+				tc.scheme, tc.credential, got, tc.want)
+		}
+	}
+
+	// An empty credential never produces a header, whatever the scheme says.
+	for _, scheme := range []string{AuthBearer, AuthAPIKey, AuthBasic, AuthHeader} {
+		r := Resolved{}
+		r.Auth.Scheme = scheme
+		if got := r.AuthHeader(); got != "" {
+			t.Errorf("scheme %q with no credential rendered %q", scheme, got)
+		}
+	}
+}
+
 func TestMissingCredentialIsReportedNotGuessed(t *testing.T) {
 	path := write(t, `
 version: 1

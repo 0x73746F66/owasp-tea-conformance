@@ -104,7 +104,14 @@ providers:
     # endpoint and version that document advertises.
     dns: vulnetix.com
     auth:
-      scheme: apikey
+      # `header` sends the credential verbatim as the Authorization header,
+      # for a value that arrives already rendered — from a vendor CLI, a
+      # credential helper or a token broker. Splitting it apart so the suite
+      # can rejoin it is a chance to get it wrong, and getting it wrong is a
+      # 401 that reads as the provider's failure.
+      #
+      # Use `apikey`, `bearer` or `basic` where you hold the bare secret.
+      scheme: header
       # Only the variable name lives in this file. Never the credential.
       credentialEnv: TEA_VULNETIX_CREDENTIAL
 

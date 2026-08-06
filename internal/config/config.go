@@ -113,12 +113,21 @@ type Auth struct {
 }
 
 // Supported authentication schemes. They are the specification's security
-// schemes plus the case of a catalogue that needs no credential at all.
+// schemes, the case of a catalogue that needs no credential at all, and the
+// escape hatch for a credential that arrives already rendered.
 const (
 	AuthNone   = "none"
 	AuthBearer = "bearer"
 	AuthBasic  = "basic"
 	AuthAPIKey = "apikey"
+	// AuthHeader sends the credential verbatim as the Authorization header.
+	//
+	// It exists for credentials produced by something that already knows how to
+	// render them — a vendor's own CLI, a credential helper, a token broker.
+	// Splitting such a value back into scheme and secret so this suite can
+	// rejoin them is a chance to get it wrong, and getting it wrong produces a
+	// 401 that reads as a provider's failure.
+	AuthHeader = "header"
 )
 
 // Provider is one server under test.
@@ -199,6 +208,8 @@ func (r Resolved) AuthHeader() string {
 		return ""
 	}
 	switch r.Auth.Scheme {
+	case AuthHeader:
+		return cred
 	case AuthBearer:
 		return "Bearer " + cred
 	case AuthBasic:
@@ -350,10 +361,10 @@ func (c *Config) validate() error {
 			return fmt.Errorf("provider %q rootUrl must be an absolute URL", p.Name)
 		}
 		switch p.Auth.Scheme {
-		case "", AuthNone, AuthBearer, AuthBasic, AuthAPIKey:
+		case "", AuthNone, AuthBearer, AuthBasic, AuthAPIKey, AuthHeader:
 		default:
-			return fmt.Errorf("provider %q has unknown auth scheme %q; use none, bearer, basic or apikey",
-				p.Name, p.Auth.Scheme)
+			return fmt.Errorf("provider %q has unknown auth scheme %q; use none, bearer, basic, "+
+				"apikey or header", p.Name, p.Auth.Scheme)
 		}
 		if _, err := ParseAreas(p.Areas); err != nil {
 			return fmt.Errorf("provider %q areas: %w", p.Name, err)
