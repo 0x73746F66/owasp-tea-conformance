@@ -634,6 +634,27 @@ func (f *flow) updateArtifact() {
 		WantStatus:  http.StatusOK,
 		SchemaPtr:   f.api.OK200("getLatestArtifact"),
 	})
+
+	// The collection the artifact was published against has to hold it.
+	//
+	// Reading the artifact by its own uuid is not the same question. A server
+	// can answer that from the publication tables while the collection is
+	// assembled from somewhere else, and then a consumer walking the object
+	// graph the specification describes, release to collection to artifact,
+	// never arrives at the document at all. Only a consumer holding the
+	// artifact uuid already would find it, and a consumer that already has the
+	// uuid did not need the collection.
+	if f.componentReleaseUUID != "" {
+		f.run(runner.Case{
+			OperationID: "getLatestCollection",
+			Name:        "the artifact is in the collection it was published against",
+			Category:    "publication",
+			Path:        "/componentRelease/" + f.componentReleaseUUID + "/collection/latest",
+			WantStatus:  http.StatusOK,
+			SchemaPtr:   f.api.OK200("getLatestCollection"),
+			Check:       requireCollectionHolds(f.artifactUUID),
+		})
+	}
 }
 
 // accessPolicy exercises the publication specification's access-policy
@@ -904,6 +925,32 @@ func requireCollectionIdentity(releaseUUID, belongsTo string) func([]byte) error
 			return fmt.Errorf("belongsTo is %q, expected %s", got, belongsTo)
 		}
 		return nil
+	}
+}
+
+// requireCollectionHolds checks that a collection lists the artifact published
+// against it, which is the step that makes the artifact reachable by walking
+// the object graph rather than by already knowing its uuid.
+func requireCollectionHolds(artifactUUID string) func([]byte) error {
+	return func(payload []byte) error {
+		var v struct {
+			Artifacts []struct {
+				UUID string `json:"uuid"`
+			} `json:"artifacts"`
+		}
+		if err := json.Unmarshal(payload, &v); err != nil {
+			return fmt.Errorf("decode: %w", err)
+		}
+		held := make([]string, 0, len(v.Artifacts))
+		for _, a := range v.Artifacts {
+			if a.UUID == artifactUUID {
+				return nil
+			}
+			held = append(held, a.UUID)
+		}
+		return fmt.Errorf("the collection does not list artifact %s, which was published "+
+			"against it and accepted; it lists %d artifact(s): %v",
+			artifactUUID, len(held), held)
 	}
 }
 
