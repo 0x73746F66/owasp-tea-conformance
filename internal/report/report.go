@@ -47,15 +47,20 @@ type Report struct {
 	Discovery discovery.Resolution `json:"discovery"`
 	Fixtures  consumer.Fixtures    `json:"fixtures"`
 	Efficacy  inventory.Stats      `json:"efficacy"`
-	Purl      purlarea.Findings    `json:"purl"`
-	CycloneDX cdxarea.Findings     `json:"cyclonedx"`
-	SPDX      spdxarea.Findings    `json:"spdx"`
-	Insights  insights.Findings    `json:"insights"`
-	CEL       celarea.Findings     `json:"cel"`
-	Prov      provarea.Findings    `json:"provenance"`
-	Perf      perfarea.Findings    `json:"performance"`
-	Publisher pubarea.Findings     `json:"publication"`
-	Results   []runner.Result      `json:"results"`
+	// Products is the catalogue as the API serves it, built by paging
+	// /products rather than read from anywhere else. It is the claim itself —
+	// these specific projects are published as TEA products — and a reader
+	// should be able to check it rather than take it on faith.
+	Products  []inventory.Product `json:"products,omitempty"`
+	Purl      purlarea.Findings   `json:"purl"`
+	CycloneDX cdxarea.Findings    `json:"cyclonedx"`
+	SPDX      spdxarea.Findings   `json:"spdx"`
+	Insights  insights.Findings   `json:"insights"`
+	CEL       celarea.Findings    `json:"cel"`
+	Prov      provarea.Findings   `json:"provenance"`
+	Perf      perfarea.Findings   `json:"performance"`
+	Publisher pubarea.Findings    `json:"publication"`
+	Results   []runner.Result     `json:"results"`
 
 	Totals     Totals                 `json:"totals"`
 	ByArea     map[config.Area]Totals `json:"byArea"`
@@ -305,6 +310,17 @@ func (r Report) Write(dir string, splitByArea bool) ([]string, error) {
 	} else {
 		path := filepath.Join(reportDir, "conformance.md")
 		if err := os.WriteFile(path, []byte(r.Markdown()), 0o644); err != nil {
+			return nil, err
+		}
+		written = append(written, path)
+	}
+
+	// The catalogue listing is always its own file. It answers a different
+	// question from the conformance verdict — what is in here, rather than is
+	// it correct — and a reader usually wants one without the other.
+	if len(r.Products) > 0 {
+		path := filepath.Join(reportDir, "catalogue.md")
+		if err := os.WriteFile(path, []byte(r.CatalogueMarkdown()), 0o644); err != nil {
 			return nil, err
 		}
 		written = append(written, path)

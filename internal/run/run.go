@@ -44,6 +44,12 @@ type Options struct {
 	// ReplayDir is the recorded run to reproduce from. Only used in replay
 	// mode.
 	ReplayDir string
+	// ReportsTo redirects where the reports are written, leaving the recordings
+	// where they are. It is what lets a replayed run render a fresh set of
+	// documents somewhere else without disturbing the run it read from.
+	ReportsTo string
+	// SplitByArea overrides the configuration's Markdown layout when set.
+	SplitByArea *bool
 	// Concurrency bounds in-flight requests. Zero picks a value from the
 	// machine's parallelism.
 	Concurrency int
@@ -195,6 +201,7 @@ func Provider(ctx context.Context, cfg *config.Config, p config.Resolved, opt Op
 		p.HasArea(config.AreaConsumer) {
 		inv = inventory.Build(ctx, client, 24, opt.Concurrency)
 		rep.Efficacy = inv.Stats
+		rep.Products = inv.Products
 		opt.Log("inventory: %d products, %d releases, %d artifacts",
 			inv.Stats.ProductsSampled, inv.Stats.ReleasesSampled, inv.Stats.Artifacts)
 	}
@@ -311,7 +318,14 @@ func Write(rep report.Report, p config.Resolved, opt Options) ([]string, error) 
 		}
 		dir = resolved
 	}
-	return rep.Write(dir, p.Output.SplitByArea)
+	if opt.ReportsTo != "" {
+		dir = filepath.Join(opt.ReportsTo, p.Slug())
+	}
+	split := p.Output.SplitByArea
+	if opt.SplitByArea != nil {
+		split = *opt.SplitByArea
+	}
+	return rep.Write(dir, split)
 }
 
 // replayDirFor resolves which directory holds a provider's recorded run.

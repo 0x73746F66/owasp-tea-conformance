@@ -622,6 +622,49 @@ func (r Report) publisherSection() string {
 	return b.String()
 }
 
+// CatalogueMarkdown lists what this provider publishes.
+//
+// It is built the way a consumer would build it — page `/products`, then ask
+// each one for its newest release — so what it records is exactly what the API
+// serves, not what any database holds.
+func (r Report) CatalogueMarkdown() string {
+	var b strings.Builder
+	w := func(format string, args ...any) { fmt.Fprintf(&b, format, args...) }
+
+	w("# Catalogue — %s\n\n", r.Provider)
+	w("The products this provider publishes, as its own API serves them.\n\n")
+	w("| | |\n|---|---:|\n")
+	w("| Products published | %d |\n", len(r.Products))
+	w("| Releases sampled | %d |\n", r.Efficacy.ReleasesSampled)
+	w("| Artifacts published across the sample | %d |\n", r.Efficacy.Artifacts)
+	w("| API root | `%s` |\n", r.RootURL)
+	w("| Generated | %s |\n", r.GeneratedAt)
+	w("\n")
+	w("Built by paging `/products` and asking each product for its newest release. Nothing\n")
+	w("here is read from anywhere but the API, so the list is exactly what a consumer sees.\n\n")
+
+	w("| Product | Latest version | Released | Identifier | UUID |\n")
+	w("|---|---|---|---|---|\n")
+	for _, p := range r.Products {
+		version := dash(p.LatestVersion)
+		if p.PreRelease && p.LatestVersion != "" {
+			version += " *(pre-release)*"
+		}
+		date := p.LatestDate
+		if len(date) >= 10 {
+			date = date[:10]
+		}
+		identifier := p.PURL
+		if identifier == "" {
+			identifier = p.TEI
+		}
+		w("| %s | %s | %s | `%s` | `%s` |\n",
+			dash(p.Name), version, dash(date), dash(identifier), p.UUID)
+	}
+	w("\n")
+	return b.String()
+}
+
 // residualMarkdown is the standalone document an administrator reads.
 func (r Report) residualMarkdown() string {
 	var b strings.Builder

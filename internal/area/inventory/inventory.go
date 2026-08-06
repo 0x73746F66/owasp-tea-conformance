@@ -81,6 +81,13 @@ type Product struct {
 	PURL string `json:"purl,omitempty"`
 	TEI  string `json:"tei,omitempty"`
 	CPE  string `json:"cpe,omitempty"`
+
+	// The newest release, where the walk sampled this product. It is what makes
+	// a catalogue listing worth reading: a product with no release is a name,
+	// and a consumer cannot do anything with a name.
+	LatestVersion string `json:"latestVersion,omitempty"`
+	LatestDate    string `json:"latestReleaseDate,omitempty"`
+	PreRelease    bool   `json:"latestIsPreRelease,omitempty"`
 }
 
 // Stats is the efficacy tally: what the published graph actually contains.
@@ -244,6 +251,7 @@ func Build(ctx context.Context, c *runner.Client, sample, concurrency int) Inven
 		}
 	}
 
+	latest := map[string]Release{}
 	var mu sync.Mutex
 	g, gctx := errgroup.WithContext(ctx)
 	g.SetLimit(concurrency)
@@ -265,14 +273,20 @@ func Build(ctx context.Context, c *runner.Client, sample, concurrency int) Inven
 				if uuid == "" {
 					continue
 				}
-				inv.Releases = append(inv.Releases, Release{
+				release := Release{
 					UUID:        uuid,
 					ProductUUID: pr.product.UUID,
 					ProductName: pr.product.Name,
 					Version:     runner.AsString(rel, "version"),
 					ReleaseDate: runner.AsString(rel, "releaseDate"),
 					PreRelease:  runner.AsBool(rel, "preRelease"),
-				})
+				}
+				inv.Releases = append(inv.Releases, release)
+				// The descending probe is the newest release, which is what a
+				// catalogue listing quotes.
+				if pr.order == "desc" {
+					latest[pr.product.UUID] = release
+				}
 			}
 			return nil
 		})
@@ -290,6 +304,14 @@ func Build(ctx context.Context, c *runner.Client, sample, concurrency int) Inven
 	}
 	inv.Releases = unique
 	inv.Stats.ReleasesSampled = len(inv.Releases)
+
+	for i := range inv.Products {
+		if rel, ok := latest[inv.Products[i].UUID]; ok {
+			inv.Products[i].LatestVersion = rel.Version
+			inv.Products[i].LatestDate = rel.ReleaseDate
+			inv.Products[i].PreRelease = rel.PreRelease
+		}
+	}
 
 	// Collections, one per sampled release. Sequence numbers come from the
 	// sorted position, so concurrency does not perturb the evidence.

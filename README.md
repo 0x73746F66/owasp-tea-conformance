@@ -155,9 +155,18 @@ Each provider's run directory holds everything the report was derived from:
 reports/<provider>/
   spec/            the exact specification bytes used, with SHA256SUMS
   responses/       every request and response, deterministically named
-  reports/         conformance.md (or one file per area), report.json,
-                   residual.md and residual.json
+  reports/         conformance.md (or one file per area), catalogue.md,
+                   report.json, residual.md and residual.json
 ```
+
+`catalogue.md` lists what the provider publishes, built by paging `/products`
+and asking each one for its newest release — the claim itself, rather than the
+verdict on it. `residual.md` appears only when the publication round-trip ran.
+
+`--markdown single|split` overrides the configured layout for one invocation,
+and `--reports-to DIR` writes the documents somewhere else while leaving the
+recordings where they are. Together they let a recorded run be re-rendered for
+another destination without disturbing the evidence.
 
 Recording filenames are derived from the area, a deterministic sequence number
 and the case name — never from execution order — which is what lets a replay ask

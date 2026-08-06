@@ -33,6 +33,8 @@ type flags struct {
 	replayDir  string
 	plan       bool
 	fetchTo    string
+	reportsTo  string
+	markdown   string
 	quiet      bool
 	failFast   bool
 }
@@ -50,6 +52,10 @@ func app() error {
 		"print what would run, and stop; makes no network requests")
 	flag.StringVar(&f.fetchTo, "fetch-specs-to", "",
 		"fetch the configured specifications into this directory and stop")
+	flag.StringVar(&f.reportsTo, "reports-to", "",
+		"write the reports under this directory instead of the configured one; recordings stay put")
+	flag.StringVar(&f.markdown, "markdown", "",
+		"override the Markdown layout: `single` for one document, `split` for one per area")
 	flag.BoolVar(&f.quiet, "quiet", false, "suppress progress output")
 	flag.BoolVar(&f.failFast, "fail-fast", false, "stop at the first provider that is not conformant")
 	flag.Parse()
@@ -87,6 +93,16 @@ func app() error {
 	opt := run.Options{
 		Mode:      mode(f),
 		ReplayDir: f.replayDir,
+		ReportsTo: f.reportsTo,
+	}
+	switch f.markdown {
+	case "":
+	case "single":
+		opt.SplitByArea = boolPtr(false)
+	case "split":
+		opt.SplitByArea = boolPtr(true)
+	default:
+		return fmt.Errorf("--markdown takes `single` or `split`, not %q", f.markdown)
 	}
 	if !f.quiet {
 		opt.Log = func(format string, args ...any) {
@@ -225,6 +241,8 @@ func printPlan(cfg *config.Config, providers []config.Resolved) {
 		fmt.Println()
 	}
 }
+
+func boolPtr(b bool) *bool { return &b }
 
 func dashed(s string) string {
 	if strings.TrimSpace(s) == "" {
