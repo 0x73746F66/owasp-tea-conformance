@@ -94,6 +94,10 @@ type Response struct {
 	Replayed bool `json:"replayed,omitempty"`
 }
 
+// indexFile is the manifest of everything a run recorded, written beside the
+// recordings so a replay can be reasoned about without opening each one.
+const indexFile = "index.json"
+
 // meta is the sidecar written next to every recorded body.
 type meta struct {
 	Area      string      `json:"area"`
@@ -352,6 +356,46 @@ func (r *Recorder) persist(req Request, key string, resp Response) error {
 	return nil
 }
 
+// Recorded reports whether an area left any recordings in the run directory.
+//
+// It answers the question a replay has to ask before running an area at all:
+// whether the recorded run exercised it. A run that skipped an area recorded
+// nothing under it, and replaying that as though it had would ask for a
+// recording per case and find none.
+func (r *Recorder) Recorded(area string) bool {
+	if r == nil || r.Dir == "" || area == "" {
+		return false
+	}
+	entries, err := os.ReadDir(filepath.Join(r.Dir, "responses", area))
+	return err == nil && len(entries) > 0
+}
+
+// RecordedAuth reports whether the recorded run sent a credential.
+//
+// A replay must describe the run it reproduces, not the environment it is
+// reproduced in. Without this a report regenerated on a machine with the
+// credential variable unset said the credential was missing, directly above a
+// publication round-trip that only an authenticated run can perform.
+func (r *Recorder) RecordedAuth() bool {
+	if r == nil || r.Dir == "" {
+		return false
+	}
+	raw, err := os.ReadFile(filepath.Join(r.Dir, "responses", indexFile))
+	if err != nil {
+		return false
+	}
+	var entries []meta
+	if json.Unmarshal(raw, &entries) != nil {
+		return false
+	}
+	for _, m := range entries {
+		if len(m.Request.Header.Values("Authorization")) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
 func (r *Recorder) replay(req Request, key string) (Response, error) {
 	dir := filepath.Join(r.Dir, "responses", req.Area)
 	metaPath := filepath.Join(dir, key+".meta.json")
@@ -401,7 +445,7 @@ func (r *Recorder) WriteIndex() error {
 	if err != nil {
 		return err
 	}
-	path := filepath.Join(r.Dir, "responses", "index.json")
+	path := filepath.Join(r.Dir, "responses", indexFile)
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}

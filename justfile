@@ -165,14 +165,25 @@ publish-hugo docs=hugo_docs dir="reports/vulnetix":
 
     # Single-document Markdown: the Hugo page set has one conformance page, and
     # the split layout's inter-page links would resolve to nothing there.
+    #
+    # A non-conformant verdict exits non-zero, and that is the exit code of the
+    # regeneration, not a failure to regenerate. Publishing must not depend on
+    # the answer being yes: a suite that only publishes when the provider passes
+    # is a marketing page. What decides success here is whether the report was
+    # written, which is checked directly below.
     go run ./cmd/tea-conformance \
       --config {{config}} \
       --reproduce-from-dir "$run_dir" \
       --reports-to "$staging" \
       --markdown single \
-      --quiet
+      --quiet || true
 
     generated="$staging/$(basename "$run_dir")/reports"
+
+    if [ ! -f "$generated/conformance.md" ]; then
+      echo "the run was not regenerated from $run_dir; nothing to publish" >&2
+      exit 1
+    fi
 
     # Front matter is prepended instead of being emitted by the suite: the weights
     # and descriptions belong to the site's information architecture, not to a

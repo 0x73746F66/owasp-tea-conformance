@@ -160,7 +160,14 @@ func Run(
 	// Refuse to write without a credential. A publication API that accepts
 	// anonymous writes is a finding, but discovering it by creating objects on
 	// an open server is not this suite's business.
-	if c.Auth == "" {
+	//
+	// A replay writes nothing, so the refusal has nothing to protect there.
+	// Applying it anyway dropped the entire area from a report regenerated with
+	// the credential absent from the environment, and the report then stated
+	// that the provider does not serve the publication specification at all. A
+	// run reproduced from its own recordings has to report what was recorded,
+	// not what the environment happens to hold when it is reproduced.
+	if c.Auth == "" && !c.Replaying(config.AreaProvider) {
 		found.Detail = "no credential is configured for this provider, and the publication " +
 			"round-trip writes objects; configure auth.credentialEnv to exercise it"
 		f.note("the publication round-trip was not run", found.Detail)

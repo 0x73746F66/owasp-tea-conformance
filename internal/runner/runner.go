@@ -42,6 +42,17 @@ type Client struct {
 	Rec *httpx.Recorder
 }
 
+// Replaying reports whether this client reads an area's recordings instead of
+// issuing its requests.
+//
+// An area that declines to run because of what its requests would do to the
+// server has to ask, since a replay does none of it. The recordings have to be
+// there as well: replaying a run that never exercised the area would turn one
+// honest note into a request per case with nothing to answer it.
+func (c *Client) Replaying(area config.Area) bool {
+	return c.Rec != nil && c.Rec.Mode == httpx.ModeReplay && c.Rec.Recorded(string(area))
+}
+
 // Case is one request the suite makes.
 type Case struct {
 	Area config.Area

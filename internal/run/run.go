@@ -79,7 +79,6 @@ func Provider(ctx context.Context, cfg *config.Config, p config.Resolved, opt Op
 		Domain:      p.DNS,
 		Areas:       p.Areas,
 		Concurrency: opt.Concurrency,
-		Credential:  credentialLabel(p),
 	}
 
 	dir := p.Output.Dir
@@ -94,6 +93,10 @@ func Provider(ctx context.Context, cfg *config.Config, p config.Resolved, opt Op
 	retain := p.Output.RetainResponses && opt.Mode == httpx.ModeLive
 	rec := httpx.New(opt.Mode, dir, retain, httpx.DefaultClient())
 	rec.ColdHTTP = httpx.ColdClient()
+
+	// After the recorder, because in replay the answer comes from the recordings
+	// rather than from this process's environment.
+	rep.Credential = credentialLabel(p, rec)
 
 	// --- Specifications ---
 	kinds := spec.KindsFor(p.Areas)
@@ -392,7 +395,26 @@ func wellKnownSchema(bundle spec.Bundle) (*jsonschema.Schema, error) {
 	return spec.LoadJSONSchema(resourceURL(doc), doc.Raw())
 }
 
-func credentialLabel(p config.Resolved) string {
+// credentialLabel describes the credential the run being reported used.
+//
+// In replay that is a question about the recordings, not about this process:
+// reproducing a report on a machine where the credential variable is unset does
+// not make the recorded run an unauthenticated one, and saying so contradicted
+// the authenticated round-trip printed further down the same page.
+func credentialLabel(p config.Resolved, rec *httpx.Recorder) string {
+	if rec != nil && rec.Mode == httpx.ModeReplay {
+		switch {
+		case !rec.RecordedAuth():
+			return "none: the recorded run sent no credential"
+		case p.Auth.Scheme == config.AuthNone || p.Auth.Scheme == "":
+			// The recordings disagree with the configuration, which happens when
+			// a directory is replayed for a provider it was not recorded for.
+			// Report the recording, since that is what the rest of the page is.
+			return "a credential, as recorded"
+		default:
+			return fmt.Sprintf("%s credential, as recorded", p.Auth.Scheme)
+		}
+	}
 	switch {
 	case p.Auth.Scheme == config.AuthNone || p.Auth.CredentialEnv == "":
 		return "none: this catalogue was read unauthenticated"
