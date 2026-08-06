@@ -14,6 +14,7 @@ import (
 	"math"
 	"net/http"
 	"net/url"
+	"reflect"
 	"sort"
 	"strings"
 	"sync"
@@ -329,7 +330,7 @@ func RunCase(ctx context.Context, c *Client, tc Case, schemaEntry any) Result {
 	}
 	// Validation applies only to the response the case was written for: a case
 	// that accepted an alternative status has, by definition, no schema for it.
-	if schemaEntry != nil && res.GotStatus == res.WantStatus {
+	if !isNilSchema(schemaEntry) && res.GotStatus == res.WantStatus {
 		res.SchemaChecked = true
 		if schemaErr, isErr := schemaEntry.(error); isErr {
 			res.Errors = append(res.Errors, "schema unavailable: "+schemaErr.Error())
@@ -348,6 +349,26 @@ func RunCase(ctx context.Context, c *Client, tc Case, schemaEntry any) Result {
 
 	res.Pass = len(res.Errors) == 0
 	return res
+}
+
+// isNilSchema reports whether a schema entry is absent.
+//
+// A plain `== nil` is not enough. A compiler that returns (*jsonschema.Schema)(nil)
+// for a document this run did not fetch produces a typed nil, and a typed nil
+// stored in an `any` compares as non-nil. The suite then called Validate on it
+// and panicked, which is a worse failure than the missing schema it was trying
+// to describe: it takes down a run that had already gathered real findings.
+func isNilSchema(entry any) bool {
+	if entry == nil {
+		return true
+	}
+	v := reflect.ValueOf(entry)
+	switch v.Kind() {
+	case reflect.Ptr, reflect.Interface, reflect.Map, reflect.Slice, reflect.Func:
+		return v.IsNil()
+	default:
+		return false
+	}
 }
 
 // ValidateAgainst decodes a body the way a JSON Schema validator requires and
