@@ -119,28 +119,44 @@ run-authed provider="vulnetix":
 # with VULNETIX_CLI_TEA_DOCS. Nothing is committed or pushed — the CLI repository
 # has its own review and release process, and this only stages the files for it.
 #
-#   just publish-hugo                       # from reports/vulnetix
-#   just publish-hugo reports/vulnetix      # explicit
+#   just publish-hugo                            # both defaults
+#   just publish-hugo ../cli/website             # a Hugo site root
+#   just publish-hugo ../cli/website/content/docs/tea
+#   just publish-hugo ../cli/website reports/vulnetix
+#
+# The destination comes first because it is the argument anybody actually
+# overrides; the run directory is almost always the default.
 #
 # Reports are regenerated offline from the run's own recordings rather than
 # copied, so what lands on the site is reproducible from the evidence beside it,
 # and a stale hand-edit on either end shows up as a diff.
 
 # INTERNAL: stage a recorded run into the Vulnetix CLI documentation site.
-publish-hugo dir="reports/vulnetix":
+publish-hugo docs=hugo_docs dir="reports/vulnetix":
     #!/usr/bin/env bash
     set -euo pipefail
 
     run_dir="{{dir}}"
-    docs="{{hugo_docs}}"
+    docs="{{docs}}"
 
     if [ ! -d "$run_dir/responses" ]; then
       echo "no recorded run at $run_dir — run 'just run vulnetix' first" >&2
       exit 1
     fi
+
+    # Accept either the TEA docs directory itself or the Hugo site root above
+    # it. Both are natural things to type, and guessing wrong here writes two
+    # pages into a directory nobody is serving.
+    if [ -d "$docs/content/docs/tea" ]; then
+      docs="$docs/content/docs/tea"
+    fi
     if [ ! -d "$docs" ]; then
-      echo "the CLI documentation tree is not at $docs" >&2
-      echo "set VULNETIX_CLI_TEA_DOCS to where it is checked out" >&2
+      echo "no TEA documentation directory at $docs" >&2
+      echo "pass the Hugo site root or the docs/tea directory, or set VULNETIX_CLI_TEA_DOCS" >&2
+      exit 1
+    fi
+    if [ ! -f "$docs/_index.md" ]; then
+      echo "$docs does not look like the TEA documentation section (no _index.md)" >&2
       exit 1
     fi
 
