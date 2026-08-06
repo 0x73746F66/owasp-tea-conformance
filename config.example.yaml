@@ -1,4 +1,4 @@
-# OWASP TEA conformance suite — example configuration.
+# OWASP TEA conformance suite: example configuration.
 #
 # Copy to config.yaml and edit. The two levels below are deliberate: the global
 # block is the default for every provider, and each provider says only what is
@@ -21,9 +21,9 @@ specs:
     path: spec/openapi.yaml
   publisher:
     # Upstream publishes this at version 0.0.2, describing products, *leaves*
-    # and collections — an older TEA generation than the 0.4.0 consumption
+    # and collections, an older TEA generation than the 0.4.0 consumption
     # document beside it, and one no current server implements. The suite has a
-    # round-trip for it and reports the mismatch rather than failing a provider
+    # round-trip for it and reports the mismatch instead of failing a provider
     # over it.
     #
     # To exercise the publication model that matches 0.4.0, point this at the
@@ -48,7 +48,7 @@ specs:
     ref: insights
     path: insights/openapi.json
     note: >-
-      not yet upstream — proposed in CycloneDX/transparency-exchange-api and
+      not yet upstream; proposed in CycloneDX/transparency-exchange-api and
       fetched here from the proposing fork
   spdx:
     repo: spdx/license-list-data
@@ -105,7 +105,7 @@ providers:
     dns: vulnetix.com
     auth:
       # `header` sends the credential verbatim as the Authorization header,
-      # for a value that arrives already rendered — from a vendor CLI, a
+      # for a value that arrives already rendered, such as from a vendor CLI, a
       # credential helper or a token broker. Splitting it apart so the suite
       # can rejoin it is a chance to get it wrong, and getting it wrong is a
       # 401 that reads as the provider's failure.

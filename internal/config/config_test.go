@@ -92,7 +92,7 @@ func TestResolveAppliesGlobalThenProviderOverrides(t *testing.T) {
 		t.Errorf("beta slug is %q, expected beta-two", beta.Slug())
 	}
 	// No credentialEnv and no scheme means an unauthenticated read, which is a
-	// legitimate configuration rather than a missing secret.
+	// legitimate configuration and not a missing secret.
 	if beta.CredentialMissing {
 		t.Error("beta is configured with no auth but reports a missing credential")
 	}
@@ -132,7 +132,7 @@ func TestAuthHeaderRendersEachScheme(t *testing.T) {
 		{AuthBearer, "tok", "Bearer tok"},
 		{AuthAPIKey, "org:hex", "ApiKey org:hex"},
 		{AuthBasic, "user:pass", "Basic dXNlcjpwYXNz"},
-		// Already base64: passed through rather than encoded twice.
+		// Already base64: passed through instead of encoded twice.
 		{AuthBasic, "dXNlcjpwYXNz", "Basic dXNlcjpwYXNz"},
 		// The escape hatch: whatever produced the value already rendered it, so
 		// the suite must not take it apart and put it back together.

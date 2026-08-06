@@ -19,10 +19,10 @@
 //
 // # Why it is not a shell script
 //
-// The Vulnetix CLI resolves credentials from six sources in precedence order —
+// The Vulnetix CLI resolves credentials from six sources in precedence order:
 // two token environment pairs, a SigV4 pair, a project dotfile, a home dotfile
-// and a netrc entry — and any of the file-backed ones may keep the secret in
-// the OS keychain rather than on disk. It then renders three different header
+// and a netrc entry. Any of the file-backed ones may keep the secret in
+// the OS keychain instead of on disk. It then renders three different header
 // shapes from them. Reimplementing that in a justfile would be a copy that
 // drifts, and the failure mode of a drifted copy is a 401 that looks like the
 // provider's fault. Asking the CLI's own package is the only version of this

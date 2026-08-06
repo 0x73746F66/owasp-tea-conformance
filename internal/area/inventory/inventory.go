@@ -1,7 +1,7 @@
 // Package inventory walks a provider's published object graph once and hands
 // the result to everything that needs to know what is actually in it.
 //
-// Four areas ask the same question in different words — what did this publisher
+// Four areas ask the same question in different words. What did this publisher
 // actually publish? Efficacy counts it, the CycloneDX area validates the BOM
 // documents in it, the SPDX area reads the licences out of those documents, and
 // the provenance area looks for attestations and signatures. Walking the
@@ -93,7 +93,7 @@ type Product struct {
 // Stats is the efficacy tally: what the published graph actually contains.
 //
 // Conformance proves the responses are well-formed. It cannot prove they are
-// complete — a server that published one artifact per release and dropped the
+// complete. A server that published one artifact per release and dropped the
 // rest would validate exactly as cleanly. These counts are how a reader tells
 // a rich publication from a hollow one.
 type Stats struct {
@@ -109,7 +109,7 @@ type Stats struct {
 	// build metadata or its exploitability statements.
 	ArtifactTypes map[string]int `json:"artifactTypes"`
 	// ArtifactNames counts by the human label, which is where the underlying
-	// document kind shows up — CBOM, AI-BOM, build manifest, analysis report.
+	// document kind shows up: CBOM, AI-BOM, build manifest, analysis report.
 	ArtifactNames map[string]int `json:"artifactNames"`
 
 	WithChecksum    int            `json:"artifactsWithChecksum"`
@@ -140,7 +140,7 @@ type Inventory struct {
 	Errors    []string   `json:"errors,omitempty"`
 
 	// Results are the walk's own requests, so its cost and its failures appear
-	// in the report rather than happening invisibly.
+	// in the report and do not happen invisibly.
 	Results []runner.Result `json:"-"`
 }
 
@@ -163,7 +163,7 @@ func Build(ctx context.Context, c *runner.Client, sample, concurrency int) Inven
 		concurrency = 8
 	}
 
-	// Page through rather than reading one page: a catalogue larger than the
+	// Page through, and never read just one page: a catalogue larger than the
 	// maximum page size would otherwise be reported as exactly that page size,
 	// which reads as a limit the publisher does not have.
 	token := ""
@@ -209,12 +209,12 @@ func Build(ctx context.Context, c *runner.Client, sample, concurrency int) Inven
 	if len(inv.Products) == 0 {
 		return inv
 	}
-	// Sorted so the sample — and therefore every recording name derived from
-	// it — does not depend on the order the server happened to page in.
+	// Sorted so the sample, and therefore every recording name derived from
+	// it, does not depend on the order the server happened to page in.
 	sort.Slice(inv.Products, func(i, j int) bool { return inv.Products[i].UUID < inv.Products[j].UUID })
 	inv.Stats.ProductsSampled = len(inv.Products)
 
-	// The pre-release tally is counted over a broad page rather than over the
+	// The pre-release tally is counted over a broad page and not over the
 	// collection sample: sampling oldest and newest picks release-branch heads
 	// almost every time, which would report zero pre-releases on a publisher
 	// that has plenty.
@@ -404,7 +404,7 @@ func (inv *Inventory) tally() {
 			if a.Version > 1 {
 				inv.Stats.MultiRevision++
 			}
-			// Counted once per artifact rather than once per format: the
+			// Counted once per artifact and not once per format: the
 			// question is whether the publisher supplied the evidence, not how
 			// many renderings it supplied it in.
 			for _, f := range a.Formats {

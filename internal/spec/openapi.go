@@ -18,7 +18,7 @@ import (
 // OpenAPI 3.1 schema objects *are* JSON Schema 2020-12, so the specification's
 // own bytes compile directly and there is no translation step between what the
 // document says and what this suite enforces. Compilation is lazy, which also
-// means an older 3.0 document — the Insights specification is one — can still
+// means an older 3.0 document, and the Insights specification is one, can still
 // be used for its operation table without every one of its schemas having to be
 // 2020-12 clean.
 type API struct {
@@ -81,7 +81,7 @@ func LoadAPI(kind Kind, resourceURL string, raw []byte) (*API, error) {
 	}
 
 	// Round-trip through JSON so the compiler sees the value model a JSON
-	// document produces — json.Number for numerics in particular.
+	// document produces, json.Number for numerics in particular.
 	asJSON, err := json.Marshal(doc)
 	if err != nil {
 		return nil, fmt.Errorf("re-encode the %s specification: %w", kind, err)
@@ -117,10 +117,10 @@ func LoadAPI(kind Kind, resourceURL string, raw []byte) (*API, error) {
 // calls for.
 //
 // This matters more than it looks. A JSON document with a duplicated key is
-// accepted by every JSON parser — last value wins — and rejected outright by a
-// YAML one. Upstream's publication document has exactly that defect, so parsing
-// it as YAML would make the suite unusable over a fault that no real client
-// notices. It is parsed as JSON, and the duplication is reported instead.
+// accepted by every JSON parser, which keeps the last value, and rejected
+// outright by a YAML one. Upstream's publication document has exactly that
+// defect, so parsing it as YAML would make the suite unusable over a fault no
+// real client notices. It is parsed as JSON, and the duplication is reported.
 func parseDocument(kind Kind, raw []byte) (map[string]any, []string, error) {
 	if looksLikeJSON(raw) {
 		var doc map[string]any
@@ -232,7 +232,7 @@ func closeMember(path *[]string, inObject []bool, expectKey *bool) {
 	*expectKey = true
 }
 
-// index walks paths → methods → responses, recording which schema each declared
+// index walks paths, then methods, then responses, recording which schema each declared
 // status promises. Response `$ref`s into components are followed so the suite
 // compares against the same schema a generated client would.
 func (a *API) index(doc map[string]any) error {
@@ -300,8 +300,8 @@ func (a *API) index(doc map[string]any) error {
 // resolveContentSchema returns the JSON Pointer of an application/json schema,
 // following one level of component `$ref`.
 //
-// Inline schemas — the discovery response wraps an array around a component
-// schema — are addressed by their own location in the document rather than
+// Inline schemas, such as the discovery response wraps an array around a component
+// schema, are addressed by their own location in the document rather than
 // flattened, so validation still runs against the specification's own bytes.
 func resolveContentSchema(node any, components map[string]any, componentPrefix, inlineBase string) string {
 	obj, ok := node.(map[string]any)
@@ -365,8 +365,8 @@ func (a *API) Status(operationID string, code int) string {
 // SuccessStatus is the lowest 2xx an operation declares, or 0 when it declares
 // none.
 //
-// The publication operations do not agree on one success code — a create
-// answers 201, an update 200, a delete 204 — so the suite reads the expected
+// The publication operations do not agree on one success code: a create
+// answers 201, an update 200, a delete 204. So the suite reads the expected
 // code out of the document rather than hard-coding a table that would drift
 // from it. Returns the schema pointer alongside, since the two are always
 // wanted together.

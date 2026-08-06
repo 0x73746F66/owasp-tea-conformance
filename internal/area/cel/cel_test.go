@@ -7,8 +7,8 @@ import (
 )
 
 // The catalogue is the yardstick this area holds a server to, so it has to be
-// right. If an expression marked valid does not in fact compile — or one marked
-// invalid does — every provider gets measured against a mistake, and the
+// right. If an expression marked valid does not in fact compile, or one marked
+// invalid does, every provider gets measured against a mistake, and the
 // disagreement reported would be the suite's, not theirs.
 func TestCatalogueMatchesTheReferenceImplementation(t *testing.T) {
 	env, err := environment()

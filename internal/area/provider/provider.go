@@ -5,9 +5,9 @@
 // around that fact.
 //
 // Every object it creates is named deterministically from the configuration, so
-// a second run addresses the same records rather than accumulating new ones. The
+// a second run addresses the same records and does not accumulate new ones. The
 // round-trip ends with the delete operations, which are therefore both the last
-// conformance cases and the cleanup — the suite does not need a separate
+// conformance cases and the cleanup, so the suite does not need a separate
 // teardown pass, because verifying that delete works *is* the teardown. And
 // because a run can be interrupted between the create and the delete, it starts
 // by reclaiming anything a previous run left behind under the same names.
@@ -80,7 +80,7 @@ type Findings struct {
 	// ModelMismatch is set when the provider serves the publication endpoints
 	// but does not speak the model the fetched document describes. It is the
 	// two upstream specifications being different generations, and it is a fact
-	// about the documents rather than a defect in the provider.
+	// about the documents and not a defect in the provider.
 	ModelMismatch bool `json:"modelMismatch,omitempty"`
 	// SpecVersion is that document's own version, which is worth printing next
 	// to the consumption specification's.
@@ -140,7 +140,7 @@ func DetectModel(api *spec.API) Model {
 // specification.
 //
 // `authority` is the provider's discovery domain, which the older model needs:
-// its object paths are addressed by TEI URN rather than by UUID, and a TEI's
+// its object paths are addressed by TEI URN and not by UUID, and a TEI's
 // authority is the domain a consumer started from.
 func Run(
 	ctx context.Context,
@@ -219,7 +219,7 @@ func dash(s string) string {
 	return s
 }
 
-// ── Naming ──────────────────────────────────────────────────────────────────
+// --- Naming ---
 //
 // Everything is derived from the configuration so a re-run addresses the same
 // objects. The purl is the handle: it is the only identifier a publisher
@@ -238,11 +238,11 @@ func componentName(cycle config.WriteCycle) string {
 	return cycle.NamePrefix + " component " + cycle.RunKey
 }
 
-// releaseVersion is fixed rather than timestamped, because a timestamp would
+// releaseVersion is fixed, never timestamped, because a timestamp would
 // make every run a new object and leave the previous one behind.
 const releaseVersion = "0.0.0-conformance"
 
-// ── Phases ──────────────────────────────────────────────────────────────────
+// --- Phases ---
 
 // preflight establishes whether the publication API is there at all, and that
 // it refuses an unauthenticated write.
@@ -282,7 +282,7 @@ func (f *flow) preflight() bool {
 		// do on purpose.
 		f.fail("the publication API accepted an unauthenticated write",
 			"POST /product succeeded with no credential; anyone can publish to this server. "+
-				"The round-trip was stopped rather than continue writing to it")
+				"The round-trip was stopped instead of writing more to it")
 		f.found.Detail = "the publication API accepted an unauthenticated write"
 		return false
 	}
@@ -364,7 +364,7 @@ func (f *flow) updateProduct() {
 // readBackProduct asserts the write is visible through the consumption API.
 //
 // This is the case that catches a publication API writing to a store the
-// consumption API does not read — the two halves of the specification sharing
+// consumption API does not read, which is the two halves of the specification sharing
 // object definitions but not data.
 func (f *flow) readBackProduct() {
 	f.run(runner.Case{
@@ -674,8 +674,8 @@ func (f *flow) accessPolicy() {
 
 // finish deletes everything this run created, in reverse dependency order.
 //
-// The delete cases are conformance cases in their own right — a publication API
-// that cannot remove what it created is not conformant — and they are also the
+// The delete cases are conformance cases in their own right, since a publication API
+// that cannot remove what it created is not conformant, and they are also the
 // cleanup. Anything that survives is recorded as residual.
 func (f *flow) finish() {
 	type target struct {
@@ -704,7 +704,7 @@ func (f *flow) finish() {
 			Path:        t.record.DeletePath,
 			WantStatus:  want,
 			// A cascading delete removes children with their parent, so a child
-			// that is already gone is correct behaviour rather than a failure.
+			// that is already gone is correct behaviour and not a failure.
 			AcceptStatus: []int{http.StatusNotFound},
 		})
 		f.markDeleted(t.record.Kind, res.GotStatus,
@@ -731,7 +731,7 @@ func (f *flow) finish() {
 	}
 }
 
-// ── Plumbing ────────────────────────────────────────────────────────────────
+// --- Plumbing ---
 
 // fixedDate is a constant so a re-run writes the same values. A timestamp would
 // make every run's objects different and defeat the reclaim step.
@@ -777,7 +777,7 @@ func (f *flow) downgrade(seq int, reason string) {
 func (f *flow) note(caseName, detail string) {
 	f.results = append(f.results, runner.Result{
 		Area: config.AreaProvider, Seq: f.next(),
-		Case: caseName, Category: "publication", Method: "—",
+		Case: caseName, Category: "publication", Method: "-",
 		Pass: true, Optional: true, Warnings: []string{detail},
 	})
 }
@@ -785,7 +785,7 @@ func (f *flow) note(caseName, detail string) {
 func (f *flow) fail(caseName, detail string) {
 	f.results = append(f.results, runner.Result{
 		Area: config.AreaProvider, Seq: f.next(),
-		Case: caseName, Category: "security", Method: "—",
+		Case: caseName, Category: "security", Method: "-",
 		Errors: []string{detail},
 	})
 }
@@ -838,7 +838,7 @@ func body(v map[string]any) []byte {
 }
 
 // identifierOf reads the assigned identity out of a create response in the
-// older model, which names it `identifier` rather than `uuid`.
+// older model, which names it `identifier` and not `uuid`.
 func identifierOf(payload []byte) string {
 	var v map[string]any
 	if err := json.Unmarshal(payload, &v); err != nil {

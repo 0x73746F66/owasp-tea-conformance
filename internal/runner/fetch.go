@@ -12,8 +12,8 @@ import (
 
 // GetJSON issues one recorded GET and decodes the body.
 //
-// Areas that need to walk the object graph rather than assert against it — the
-// fixture seed, the artifact inventory — go through here, so every request a
+// Areas that need to walk the object graph instead of asserting against it, such as the
+// fixture seed and the artifact inventory, go through here, so every request a
 // run makes ends up in the same evidence directory as the cases do. The caller
 // supplies the sequence number, because only the caller knows the
 // deterministic order its walk visits things in.

@@ -64,8 +64,8 @@ const seedArea = "seed"
 //
 // The walk is strictly sequential, so the counter is deterministic: replaying
 // the same recordings issues the same requests in the same order and arrives at
-// the same fixtures, which is what makes the case list — and therefore every
-// recording name after it — reproducible.
+// the same fixtures, which is what makes the case list, and therefore every
+// recording name after it, reproducible.
 type Seeder struct {
 	client *runner.Client
 	seq    int
@@ -90,7 +90,7 @@ func (s *Seeder) Seed(ctx context.Context, authority string) (Fixtures, error) {
 	}
 
 	// Prefer a product that actually has releases, so the release-dependent
-	// cases exercise data rather than empty lists.
+	// cases exercise data and not empty lists.
 	for _, it := range items {
 		p, _ := it.(map[string]any)
 		uuid, _ := p["uuid"].(string)
@@ -170,7 +170,7 @@ func (s *Seeder) get(ctx context.Context, name, path string, query url.Values) (
 }
 
 // Get exposes the seeder's recorded fetch to the areas that need to walk the
-// graph beyond what the fixtures carry — the CycloneDX and provenance areas
+// graph beyond what the fixtures carry. The CycloneDX and provenance areas
 // both do, and routing them through here keeps every request in the run's
 // evidence.
 func (s *Seeder) Get(ctx context.Context, name, path string, query url.Values) (map[string]any, error) {

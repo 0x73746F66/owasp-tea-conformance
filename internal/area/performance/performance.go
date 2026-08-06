@@ -17,7 +17,7 @@
 // describes nothing that ever happened.
 //
 // Correctness is asserted once per shape, through the recorder, before any
-// timing begins — and the responses collected under load are validated too,
+// timing begins, and the responses collected under load are validated too,
 // after the timer stops. Correctness under contention is a distinct claim from
 // correctness at rest, and an endpoint that starts truncating results once its
 // caches are contended would pass every other area and fail here.
@@ -85,7 +85,7 @@ type Findings struct {
 	Iterations   int           `json:"iterationsPerShape"`
 	Concurrency  int           `json:"concurrency"`
 	Measurements []Measurement `json:"measurements"`
-	// NotMeasured is set when the run could not take timings — a replayed run
+	// NotMeasured is set when the run could not take timings, such as a replayed run
 	// in particular, where every latency on record belongs to the run that
 	// produced the directory.
 	NotMeasured string `json:"notMeasured,omitempty"`

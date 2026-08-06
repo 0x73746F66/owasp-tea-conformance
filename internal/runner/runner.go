@@ -26,7 +26,7 @@ import (
 )
 
 // NoAuth, used as a Case.Auth override, sends the request with no
-// Authorization header at all — the way an unauthenticated client would.
+// Authorization header at all, the way an unauthenticated client would.
 const NoAuth = "-"
 
 // Client addresses one TEA server.
@@ -54,7 +54,7 @@ type Case struct {
 	Method      string
 
 	// Path is relative to Client.BaseURL. AbsoluteURL overrides both, for the
-	// documents that live outside the API root — the discovery document, and
+	// documents that live outside the API root: the discovery document, and
 	// artifact downloads that point wherever the publisher put them.
 	Path        string
 	AbsoluteURL string
@@ -74,7 +74,7 @@ type Case struct {
 	// status-only check.
 	SchemaPtr string
 	// Schema is a pre-compiled schema used instead of SchemaPtr, for responses
-	// validated against a document other than the one under test — the
+	// validated against a document other than the one under test, since the
 	// Insights responses are CycloneDX.
 	Schema any
 
@@ -95,7 +95,7 @@ type Case struct {
 	Category string
 
 	// Optional marks a case whose failure is reported but does not make the
-	// provider non-conformant — an operation the specification does not
+	// provider non-conformant: an operation the specification does not
 	// require, or a document a publisher is free not to hold.
 	Optional bool
 
@@ -103,8 +103,8 @@ type Case struct {
 	//
 	// Every response the TEA specifications declare is JSON, so the default is
 	// to require it. An artifact download is the exception: the bytes behind an
-	// artifact are whatever the publisher stored — a lockfile, a shell script,
-	// a signature — and demanding JSON of them would report a correctly-served
+	// artifact are whatever the publisher stored, which may be a lockfile or a
+	// shell script. Demanding JSON of those would report a correctly-served
 	// go.mod as a conformance failure.
 	AnyContentType bool
 }
@@ -195,8 +195,8 @@ func Run(ctx context.Context, c *Client, api *spec.API, cases []Case, concurrenc
 }
 
 // RunSerial executes cases strictly in order, for flows where one case's
-// outcome decides the next — the publisher round-trip in particular, where an
-// object has to exist before it can be read, revised and deleted.
+// outcome decides the next. The publisher round-trip is the reason it exists:
+// an object has to exist before it can be read, revised and deleted.
 func RunSerial(ctx context.Context, c *Client, api *spec.API, cases []Case) []Result {
 	results := make([]Result, 0, len(cases))
 	for _, tc := range cases {
@@ -279,7 +279,7 @@ func RunCase(ctx context.Context, c *Client, tc Case, schemaEntry any) Result {
 		Body:   tc.Body,
 	})
 	if err != nil {
-		// A recorder error means the run itself is broken — a duplicate
+		// A recorder error means the run itself is broken: a duplicate
 		// recording name, an unwritable directory, a replay with no recording.
 		// That is not a finding about the provider, so it is surfaced as one
 		// loud failure rather than folded into the conformance tally.
@@ -319,7 +319,7 @@ func RunCase(ctx context.Context, c *Client, tc Case, schemaEntry any) Result {
 
 	// Content-Type is part of the contract: every declared response in the
 	// specification is application/json, and a client selects its parser from
-	// this header. Artifact downloads opt out — see Case.AnyContentType.
+	// this header. Artifact downloads opt out; see Case.AnyContentType.
 	if ct := resp.Header.Get("Content-Type"); !tc.AnyContentType && ct != "" && !isJSONContentType(ct) {
 		res.Errors = append(res.Errors, "Content-Type is not application/json: "+ct)
 	}
@@ -351,7 +351,7 @@ func RunCase(ctx context.Context, c *Client, tc Case, schemaEntry any) Result {
 }
 
 // ValidateAgainst decodes a body the way a JSON Schema validator requires and
-// reports every violation, not just the first: a conformance report is only
+// reports every violation it finds, because a conformance report is only
 // actionable if it lists everything that is wrong.
 func ValidateAgainst(schemaEntry any, body []byte) []string {
 	type validator interface{ Validate(any) error }
@@ -404,12 +404,12 @@ func snippet(b []byte) string {
 	s := strings.TrimSpace(string(b))
 	s = strings.ReplaceAll(s, "\n", " ")
 	if len(s) > max {
-		return s[:max] + "…"
+		return s[:max] + "..."
 	}
 	return s
 }
 
-// ── Latency statistics ──────────────────────────────────────────────────────
+// --- Latency statistics ---
 
 // Latency is the distribution of response times for a set of measurements.
 type Latency struct {

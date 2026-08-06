@@ -4,7 +4,7 @@
 // The shape is deliberately two-level: a global block that is the sensible
 // default for every provider, and a per-provider block that overrides it. Most
 // real configurations set the global block once and then say only what is
-// different about each provider — which areas it cannot serve, which credential
+// different about each provider: which areas it cannot serve, which credential
 // it needs, where its reports should land.
 package config
 
@@ -44,7 +44,7 @@ type Config struct {
 	Providers []Provider `yaml:"providers"`
 
 	// path is where this configuration was read from, used to resolve relative
-	// output directories against the file rather than the caller's cwd.
+	// output directories against the file and not the caller's cwd.
 	path string `yaml:"-"`
 }
 
@@ -86,7 +86,8 @@ type Output struct {
 // Performance configures the latency measurement.
 type Performance struct {
 	// ColdSamples is how many times each request shape is measured on a fresh
-	// connection with no reuse — the number a consumer pays on first contact.
+	// connection with no reuse. That is the cost a consumer pays on first
+	// contact.
 	ColdSamples int `yaml:"coldSamples"`
 	// Iterations is how many times each shape is replayed warm.
 	Iterations int `yaml:"iterations"`
@@ -106,7 +107,7 @@ type WriteCycle struct {
 }
 
 // Auth describes how to authenticate to a provider. Credentials are never
-// written in the file — only the name of the environment variable holding one.
+// written in the file. Only the name of the environment variable holding one.
 type Auth struct {
 	Scheme        string `yaml:"scheme"`
 	CredentialEnv string `yaml:"credentialEnv"`
@@ -123,7 +124,7 @@ const (
 	// AuthHeader sends the credential verbatim as the Authorization header.
 	//
 	// It exists for credentials produced by something that already knows how to
-	// render them — a vendor's own CLI, a credential helper, a token broker.
+	// render them: a vendor's own CLI, a credential helper, a token broker.
 	// Splitting such a value back into scheme and secret so this suite can
 	// rejoin them is a chance to get it wrong, and getting it wrong produces a
 	// 401 that reads as a provider's failure.
@@ -134,13 +135,13 @@ const (
 type Provider struct {
 	Name string `yaml:"name"`
 
-	// DNS is the domain a TEI names — the input to discovery, and the
+	// DNS is the domain a TEI names. It is the input to discovery, and the
 	// authority half of every TEI this provider issues.
 	DNS string `yaml:"dns"`
 
 	// RootURL skips discovery and addresses the API directly. Only for servers
 	// that do not publish a discovery document; the discovery area reports the
-	// absence rather than hiding it.
+	// absence instead of hiding it.
 	RootURL string `yaml:"rootUrl"`
 	// Version is the TEA version to use when RootURL is set explicitly.
 	Version string `yaml:"version"`

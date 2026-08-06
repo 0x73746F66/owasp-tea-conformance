@@ -21,7 +21,7 @@ type Version struct {
 }
 
 // ParseVersion parses a version string. An unparseable string is returned with
-// Valid false rather than as an error: a provider advertising a version this
+// Valid false and not as an error: a provider advertising a version this
 // suite cannot parse is a finding to report, not a reason to abandon the run.
 func ParseVersion(s string) Version {
 	v := Version{Raw: s}
@@ -43,7 +43,7 @@ func ParseVersion(s string) Version {
 	}
 	// SemVer requires all three of major, minor and patch. "1.0" is a common
 	// and reasonable-looking thing to advertise, and it is not a version the
-	// specification's selection rule can be applied to — so it is reported
+	// specification's selection rule can be applied to, so it is reported
 	// rather than quietly padded to 1.0.0.
 	parts := strings.Split(core, ".")
 	if len(parts) != 3 {

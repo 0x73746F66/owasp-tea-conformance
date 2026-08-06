@@ -69,7 +69,7 @@ func TestPickEndpointPrefersTheMatchingGenerationThenPriority(t *testing.T) {
 		t.Errorf("selected version %q", version)
 	}
 	// Among endpoints offering the version the client speaks, priority decides
-	// — not the highest version on offer anywhere.
+	// and not the highest version on offer anywhere.
 	if endpoint.URL != "https://high.example" {
 		t.Errorf("selected %q, expected the higher-priority endpoint", endpoint.URL)
 	}

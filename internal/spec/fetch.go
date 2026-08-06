@@ -211,7 +211,7 @@ func (f *Fetcher) get(ctx context.Context, url string) ([]byte, error) {
 }
 
 // resolveCommit turns a branch name into the commit it pointed at, so a report
-// records the upstream state rather than a moving name.
+// records the upstream state and not a moving name.
 //
 // Best effort: the call is unauthenticated and rate-limited, and a run whose
 // specifications fetched cleanly should not fail because a provenance nicety

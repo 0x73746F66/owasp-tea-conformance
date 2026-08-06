@@ -8,7 +8,7 @@
 //
 // Replay is the reason the naming rules here are strict. A recorded run is only
 // reproducible if the same suite, given the same configuration, asks for the
-// same files in the same order — so a recording's filename is derived from the
+// same files in the same order. A recording's filename is derived from the
 // area, a caller-supplied sequence number and a stable slug, never from wall
 // clock, execution order or a hash of a response.
 package httpx
@@ -61,7 +61,7 @@ type Request struct {
 	// Seq orders the recording within its area. It must be deterministic:
 	// derived from a case's position in a deterministically-built list, or
 	// from a strictly sequential flow. It is what lets the same URL appear
-	// twice in one area with two different expected answers — a provider's
+	// twice in one area with two different expected answers, such as a provider's
 	// object read before and after its delete, for instance.
 	Seq int
 	// Name is a human-readable label, slugged into the filename.
@@ -82,7 +82,7 @@ type Response struct {
 	Bytes     int         `json:"bytes"`
 
 	// TransportError is set when no HTTP response was obtained at all. It is
-	// carried rather than returned as an error because a refused connection is
+	// carried instead of returned as an error because a refused connection is
 	// a conformance result, not a reason to abandon the run.
 	TransportError string `json:"transportError,omitempty"`
 
@@ -90,7 +90,7 @@ type Response struct {
 	// was written to disk and nothing was validated.
 	BodyDiscarded bool `json:"bodyDiscarded,omitempty"`
 
-	// Replayed marks a response that came from disk rather than a server.
+	// Replayed marks a response that came from disk and not from a server.
 	Replayed bool `json:"replayed,omitempty"`
 }
 
@@ -154,7 +154,7 @@ func New(mode Mode, dir string, retain bool, client *http.Client) *Recorder {
 
 // DefaultClient is a keep-alive-capable client sized for a consumer walking an
 // object graph. Measuring a fresh TCP and TLS handshake on every request would
-// report the network rather than the server.
+// report the network and not the server.
 func DefaultClient() *http.Client {
 	return &http.Client{
 		// Generous, because a cold catalogue's first request legitimately
@@ -170,7 +170,7 @@ func DefaultClient() *http.Client {
 }
 
 // ColdClient never reuses a connection, so every request it makes pays DNS, TCP
-// and TLS afresh — which is what a consumer's first contact actually costs.
+// and TLS afresh, which is what a consumer's first contact actually costs.
 func ColdClient() *http.Client {
 	return &http.Client{
 		Timeout: 120 * time.Second,
@@ -182,7 +182,7 @@ func ColdClient() *http.Client {
 
 // Do issues, records or replays one request.
 //
-// It returns an error only for conditions that make the run itself invalid — a
+// It returns an error only for conditions that make the run itself invalid: a
 // replay with no recording, a directory it cannot write. A server that refused
 // the connection comes back as a Response with TransportError set, because that
 // is a finding.
@@ -281,9 +281,9 @@ func (r *Recorder) issue(ctx context.Context, req Request, client *http.Client) 
 	res.Body = payload
 	res.Bytes = len(payload)
 
-	// A dry run reads every body — it has to, because the endpoints it is
+	// A dry run reads every body. It has to, because the endpoints it is
 	// checking are addressed by identifiers that only exist in earlier
-	// responses — and then keeps none of it. What "stores nothing" means is
+	// responses. It then keeps none of it. What "stores nothing" means is
 	// that nothing reaches the disk, and what "judges nothing" means is that no
 	// schema or assertion runs; neither is a claim about memory.
 	if r.Mode == ModeDryRun {
@@ -316,7 +316,7 @@ func (r *Recorder) persist(req Request, key string, resp Response) error {
 	bodyName := key + bodyExtension(resp)
 	if len(resp.Body) > 0 {
 		// Stored verbatim. Re-indenting the JSON would read better and would
-		// also make a replayed run judge different bytes from the live one —
+		// also make a replayed run judge different bytes from the live one:
 		// the checksum verification in the CycloneDX area digests exactly what
 		// is on disk, and a reformatted copy would never match.
 		if err := os.WriteFile(filepath.Join(dir, bodyName), resp.Body, 0o644); err != nil {
@@ -357,7 +357,7 @@ func (r *Recorder) replay(req Request, key string) (Response, error) {
 	metaPath := filepath.Join(dir, key+".meta.json")
 	raw, err := os.ReadFile(metaPath)
 	if err != nil {
-		return Response{}, fmt.Errorf("replay: no recording at %s — the recorded run did not "+
+		return Response{}, fmt.Errorf("replay: no recording at %s. The recorded run did not "+
 			"make this request, so this configuration cannot be reproduced from that directory", metaPath)
 	}
 	var m meta
@@ -489,7 +489,7 @@ func redact(h http.Header) http.Header {
 	out := h.Clone()
 	for _, name := range []string{"Authorization", "Proxy-Authorization", "Cookie", "X-Api-Key"} {
 		if out.Get(name) != "" {
-			out.Set(name, "«redacted»")
+			out.Set(name, "redacted")
 		}
 	}
 	return out

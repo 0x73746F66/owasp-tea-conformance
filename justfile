@@ -5,7 +5,7 @@
 
 config := if path_exists("config.yaml") == "true" { "config.yaml" } else { "config.example.yaml" }
 
-# INTERNAL USE ONLY — see the recipes at the bottom of this file. Everything
+# INTERNAL USE ONLY. See the recipes at the bottom of this file. Everything
 # above them is for anybody running the suite; those two paths wire it to
 # Vulnetix's own CLI and documentation site, and are useless to anyone else.
 hugo_docs := env("VULNETIX_CLI_TEA_DOCS", "../cli/website/content/docs/tea")
@@ -57,19 +57,19 @@ reproduce dir:
 fetch-specs:
     go run ./cmd/tea-conformance --config {{config}} --fetch-specs-to spec-preview
 
-# ─── INTERNAL USE ONLY ──────────────────────────────────────────────────────
+# --- INTERNAL USE ONLY ---
 #
 # Both recipes below wire this suite to Vulnetix's own tooling. They are not
 # part of using the suite: no test touches them, no other recipe depends on
 # them, and someone testing a different provider should ignore them entirely.
 #
-# ── Credentials ─────────────────────────────────────────────────────────────
+# --- Credentials ---
 #
 # The Vulnetix CLI already knows how to authenticate. It resolves a credential
 # from six sources in precedence order, any of which may keep the secret in the
-# OS keychain rather than on disk, and renders one of three header shapes from
-# it. Rather than copy that here — where it would drift, and where a drifted
-# copy fails as a 401 that reads like the provider's fault — these recipes ask
+# OS keychain instead of on disk, and renders one of three header shapes from
+# it. Rather than copy that here, where it would drift and where a drifted
+# copy fails as a 401 that reads like the provider's fault, these recipes ask
 # the CLI's own package for the finished Authorization header.
 #
 # The provider entry that consumes it uses `scheme: header`, which sends the
@@ -103,10 +103,10 @@ run-authed provider="vulnetix":
     TEA_VULNETIX_CREDENTIAL="$cred" \
       go run ./cmd/tea-conformance --config {{config}} --provider {{provider}}
 
-# ── Documentation ───────────────────────────────────────────────────────────
+# --- Documentation ---
 #
 # Publishes a recorded run into the Vulnetix CLI documentation site, which is a
-# separate repository. It is here rather than there because the report
+# separate repository. It is here and not there because the report
 # format belongs to this suite: when a section is renamed the recipe that maps
 # it onto Hugo pages should move in the same commit.
 #
@@ -116,7 +116,7 @@ run-authed provider="vulnetix":
 # Markdown in `reports/<provider>/reports/` and do whatever your own site needs.
 #
 # It writes into ../cli, which is another working copy on this machine. Override
-# with VULNETIX_CLI_TEA_DOCS. Nothing is committed or pushed — the CLI repository
+# with VULNETIX_CLI_TEA_DOCS. Nothing is committed or pushed. The CLI repository
 # has its own review and release process, and this only stages the files for it.
 #
 #   just publish-hugo                            # both defaults
@@ -140,7 +140,7 @@ publish-hugo docs=hugo_docs dir="reports/vulnetix":
     docs="{{docs}}"
 
     if [ ! -d "$run_dir/responses" ]; then
-      echo "no recorded run at $run_dir — run 'just run vulnetix' first" >&2
+      echo "no recorded run at $run_dir; run 'just run vulnetix' first" >&2
       exit 1
     fi
 
@@ -174,7 +174,7 @@ publish-hugo docs=hugo_docs dir="reports/vulnetix":
 
     generated="$staging/$(basename "$run_dir")/reports"
 
-    # Front matter is prepended rather than emitted by the suite: the weights
+    # Front matter is prepended instead of being emitted by the suite: the weights
     # and descriptions belong to the site's information architecture, not to a
     # conformance report, and a report that carried them would be wrong
     # everywhere else.

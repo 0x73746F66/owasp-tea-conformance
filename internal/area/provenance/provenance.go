@@ -1,8 +1,8 @@
 // Package provenance checks the evidence that says where a published artifact
 // came from and that it has not been altered since.
 //
-// TEA's object model is careful about identity — an artifact is immutable and
-// versioned — but identity is only worth something if a consumer can verify it.
+// TEA's object model is careful about identity, and an artifact is immutable and
+// versioned, but identity is only worth something if a consumer can verify it.
 // That verification has three parts, and a publisher can conform to the object
 // specification while supplying none of them:
 //
@@ -80,7 +80,7 @@ func Run(ctx context.Context, c *runner.Client, inv inventory.Inventory, concurr
 	}
 	var results []runner.Result
 
-	// ── Coverage, counted from what the API already told us ─────────────────
+	// --- Coverage, counted from what the API already told us ---
 	var attestations []inventory.Artifact
 	var signatures []struct {
 		artifact inventory.Artifact
@@ -119,14 +119,14 @@ func Run(ctx context.Context, c *runner.Client, inv inventory.Inventory, concurr
 		}
 	}
 
-	// ── The attestations themselves ─────────────────────────────────────────
+	// --- The attestations themselves ---
 	sort.Slice(attestations, func(i, j int) bool { return attestations[i].UUID < attestations[j].UUID })
 	if len(attestations) > AttestationLimit {
 		found.AttestationsSkipped = len(attestations) - AttestationLimit
 		attestations = attestations[:AttestationLimit]
 	}
 	cases := make([]runner.Case, 0, len(attestations))
-	// Kept alongside the cases rather than indexed back into `attestations`:
+	// Kept alongside the cases instead of indexed back into `attestations`:
 	// an artifact with no download URL gets no case, and the two slices would
 	// otherwise drift apart by one and mislabel every finding after it.
 	attTargets := make([]inventory.Artifact, 0, len(attestations))
@@ -167,9 +167,9 @@ func Run(ctx context.Context, c *runner.Client, inv inventory.Inventory, concurr
 	}
 	results = append(results, attResults...)
 
-	// ── Signatures ──────────────────────────────────────────────────────────
+	// --- Signatures ---
 	//
-	// The signature is not verified — that needs a trust root this suite has no
+	// The signature is not verified. That needs a trust root this suite has no
 	// way to establish, and inventing one would be worse than saying so. What
 	// is checked is that the published URL serves something, because a
 	// signature a consumer cannot fetch protects nothing.
@@ -193,11 +193,11 @@ func Run(ctx context.Context, c *runner.Client, inv inventory.Inventory, concurr
 	found.SignaturesChecked = len(sigCases)
 	results = append(results, runner.Run(ctx, c, nil, sigCases, concurrency)...)
 
-	// ── Coverage verdicts ───────────────────────────────────────────────────
+	// --- Coverage verdicts ---
 	//
 	// These are reported, never failed. TEA does not require a publisher to
 	// sign or attest anything, and a suite that failed providers for choosing
-	// not to would be enforcing a policy rather than a specification.
+	// not to would be enforcing a policy and not a specification.
 	results = append(results,
 		coverage("artifacts carry a checksum", found.WithChecksum, found.Artifacts,
 			"a consumer cannot verify the bytes it downloads against the record"),
@@ -211,7 +211,7 @@ func Run(ctx context.Context, c *runner.Client, inv inventory.Inventory, concurr
 			Area: config.AreaProvenance, Seq: 0,
 			Case: fmt.Sprintf("%d further attestation(s) were not downloaded (limit %d)",
 				found.AttestationsSkipped, AttestationLimit),
-			Category: "coverage", Method: "—", Pass: true, Optional: true,
+			Category: "coverage", Method: "-", Pass: true, Optional: true,
 		})
 	}
 	return results, found
@@ -222,7 +222,7 @@ func coverage(what string, have, total int, why string) runner.Result {
 		Area: config.AreaProvenance, Seq: 0,
 		OperationID: "provenanceCoverage",
 		Category:    "coverage",
-		Method:      "—",
+		Method:      "-",
 		Pass:        true,
 		Optional:    true,
 		Case:        fmt.Sprintf("%d of %d %s", have, total, what),
@@ -236,7 +236,7 @@ func coverage(what string, have, total int, why string) runner.Result {
 // isAttestation recognises artifacts that carry a signed claim about a build.
 //
 // `BUILD_META` is deliberately not on the list. TEA uses it for build metadata,
-// and in practice that means the archived inputs — a go.mod, a Cargo.lock, a
+// and in practice that means the archived inputs: a go.mod, a Cargo.lock, a
 // workflow file, a pre-commit hook. Those are exactly what a publisher should
 // be publishing under that type, and treating them as attestations made the
 // suite demand an in-toto Statement of a lockfile and report a correctly-served
@@ -250,7 +250,7 @@ func isAttestation(a inventory.Artifact) bool {
 		return true
 	}
 	// Outside those types, only an explicit signal counts. A name is weak
-	// evidence, so it has to name the format rather than merely mention the
+	// evidence, so it has to name the format, not just the
 	// subject.
 	haystack := strings.ToLower(a.Name)
 	for _, f := range a.Formats {

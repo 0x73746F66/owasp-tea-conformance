@@ -52,7 +52,7 @@ func TestRecordThenReplayReturnsTheSameResponse(t *testing.T) {
 	if strings.Contains(string(meta), "very-secret") {
 		t.Error("the recorded request contains the credential; reports are meant to be publishable")
 	}
-	if !strings.Contains(string(meta), "«redacted»") {
+	if !strings.Contains(string(meta), "redacted") {
 		t.Error("the Authorization header was dropped rather than redacted")
 	}
 

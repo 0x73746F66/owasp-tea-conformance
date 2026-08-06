@@ -77,7 +77,7 @@ func (r Report) summaryMarkdown(withLinks bool) string {
 
 	w("### Coverage\n\n")
 	w("A conformance claim is only as good as its coverage, so an operation that was never\n")
-	w("exercised is named rather than quietly left out of the totals.\n\n")
+	w("exercised is named, not quietly left out of the totals.\n\n")
 	w("| Specification | Version | Declared | Exercised |\n|---|---|---:|---:|\n")
 	for _, cov := range r.Coverage {
 		w("| %s | %s | %d | %d |\n", cov.Specification, dash(cov.Version), cov.Declared, cov.Exercised)
@@ -87,7 +87,7 @@ func (r Report) summaryMarkdown(withLinks bool) string {
 		if len(cov.Unexercised) == 0 {
 			continue
 		}
-		w("%s — not exercised: `%s`\n\n", cov.Specification, strings.Join(cov.Unexercised, "`, `"))
+		w("%s, not exercised: `%s`\n\n", cov.Specification, strings.Join(cov.Unexercised, "`, `"))
 	}
 
 	w("%s", r.specProvenance())
@@ -95,11 +95,11 @@ func (r Report) summaryMarkdown(withLinks bool) string {
 	if withLinks {
 		w("## Areas\n\n")
 		for _, area := range r.Areas {
-			w("- [%s](%s.md) — %s\n", area, area, config.Description[area])
+			w("- [%s](%s.md): %s\n", area, area, config.Description[area])
 		}
 		w("\n")
 		if r.Publisher.Implemented || len(r.Publisher.Residual) > 0 {
-			w("- [residual records](residual.md) — what the publication round-trip left behind\n\n")
+			w("- [residual records](residual.md): what the publication round-trip left behind\n\n")
 		}
 		w("%s", r.methodSection())
 	}
@@ -143,7 +143,7 @@ func (r Report) specProvenance() string {
 	if len(r.SpecWarnings) > 0 {
 		w("#### Defects in the specifications themselves\n\n")
 		w("These are faults in the documents every provider here was judged by, not in any\n")
-		w("provider. They are reported rather than worked around silently.\n\n")
+		w("provider. They are reported, not worked around silently.\n\n")
 		for _, warning := range r.SpecWarnings {
 			w("- %s\n", warning)
 		}
@@ -155,7 +155,7 @@ func (r Report) specProvenance() string {
 // areaMarkdown is one area as its own document.
 func (r Report) areaMarkdown(area config.Area) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "# %s — %s\n\n", r.Provider, area)
+	fmt.Fprintf(&b, "# %s: %s\n\n", r.Provider, area)
 	fmt.Fprintf(&b, "%s\n\n", config.Description[area])
 	t := r.ByArea[area]
 	fmt.Fprintf(&b, "| Cases | Passed | Failed | Advisory |\n|---:|---:|---:|---:|\n")
@@ -212,7 +212,7 @@ func (r Report) discoverySection() string {
 	w("| Step | Result |\n|---|---|\n")
 	dns := strings.Join(d.DNS.Addresses, ", ")
 	if d.DNS.CNAME != "" {
-		dns = "CNAME " + d.DNS.CNAME + " → " + dns
+		dns = "CNAME " + d.DNS.CNAME + " -> " + dns
 	}
 	if d.DNS.Error != "" {
 		dns = "**" + d.DNS.Error + "**"
@@ -229,7 +229,7 @@ func (r Report) discoverySection() string {
 	if d.Document != nil && len(d.Document.Endpoints) > 0 {
 		w("| Endpoint | Versions | Priority |\n|---|---|---:|\n")
 		for _, e := range d.Document.Endpoints {
-			priority := "—"
+			priority := "-"
 			if e.Priority != nil {
 				priority = fmt.Sprintf("%.2f", *e.Priority)
 			}
@@ -253,8 +253,8 @@ func (r Report) consumerSection() string {
 
 	w("## Fixtures\n\n")
 	w("The run walked the object graph outwards from `/products`; these are the live\n")
-	w("identifiers it resolved. Seeding from the API rather than from constants is what makes\n")
-	w("a green run mean the graph is navigable rather than that a fixture exists.\n\n")
+	w("identifiers it resolved. Seeding from the API instead of from constants is what makes\n")
+	w("a green run mean the graph is navigable, and not simply that a fixture exists.\n\n")
 	w("| Object | Identifier |\n|---|---|\n")
 	w("| TEA Product | `%s` (%s) |\n", f.ProductUUID, dash(f.ProductName))
 	w("| TEA Product Release | `%s` (version `%s`) |\n", f.ProductReleaseUUID, dash(f.ReleaseVersion))
@@ -263,7 +263,7 @@ func (r Report) consumerSection() string {
 	if f.ArtifactSeen {
 		w("| TEA Artifact | `%s` |\n", f.ArtifactUUID)
 	} else {
-		w("| TEA Artifact | none reachable — the artifact operations were not exercised |\n")
+		w("| TEA Artifact | none reachable, so the artifact operations were not exercised |\n")
 	}
 	w("| TEI authority | `%s` |\n", dash(f.Authority))
 	w("\n")
@@ -446,7 +446,7 @@ func (r Report) insightsSection() string {
 	if !i.Implemented {
 		w("The Insights API was not exercised against this provider. That is not a conformance\n")
 		w("failure: Insights is a separate specification and a TEA server is not required to\n")
-		w("implement it — and where it answered 401, it is served but was not reachable with\n")
+		w("implement it. Where it answered 401, it is served but was not reachable with\n")
 		w("this run's credential.\n\n")
 		if i.Detail != "" {
 			w("- %s\n\n", i.Detail)
@@ -454,8 +454,8 @@ func (r Report) insightsSection() string {
 		return b.String()
 	}
 	w("A separate specification mounted at `%s`. Its responses are CycloneDX documents, so\n", i.BaseURL)
-	w("they are validated against the CycloneDX schema rather than against anything in the\n")
-	w("Insights document — that is where its `$ref` points, and it is where conformance\n")
+	w("they are validated against the CycloneDX schema and not against anything in the\n")
+	w("Insights document. That is where its `$ref` points, and it is where conformance\n")
 	w("actually lives.\n\n")
 	w("| Measure | Value |\n|---|---|\n")
 	if i.SpecVersion != "" {
@@ -478,7 +478,7 @@ func (r Report) celSection() string {
 	w("## Query language\n\n")
 	w("Every expression below was compiled twice: once by `google/cel-go`, which is the\n")
 	w("reference implementation, and once by this server. The finding is the disagreement,\n")
-	w("not either result on its own — a server with its own parser can accept an expression\n")
+	w("not either result on its own. A server with its own parser can accept an expression\n")
 	w("CEL rejects, and a client generated from the specification would then write queries\n")
 	w("that quietly do not mean what its author thought.\n\n")
 	w("| Measure | Value |\n|---|---:|\n")
@@ -551,8 +551,8 @@ func (r Report) performanceSection() string {
 	w("steady state: the same shape replayed %d times at %d in flight over a warm pool. A\n", p.Iterations, p.Concurrency)
 	w("single averaged number would describe neither.\n\n")
 	w("Every response was validated after its timer stopped, so validation never inflates a\n")
-	w("measurement — and an endpoint that starts returning the wrong thing only once it is\n")
-	w("contended fails here rather than passing everywhere.\n\n")
+	w("measurement, and an endpoint that starts returning the wrong thing only once it is\n")
+	w("contended fails here instead of passing everywhere.\n\n")
 
 	w("| Request | Cold p50 | Cached p50 | Speed-up | Cached p95 | Cached p99 | Spread | req/s | Failures |\n")
 	w("|---|---:|---:|---:|---:|---:|---:|---:|---:|\n")
@@ -593,7 +593,7 @@ func (r Report) publisherSection() string {
 		w("> That is an older TEA generation than the consumption specification this run used.\n")
 		w("> The two documents upstream are not the same version and do not share an object\n")
 		w("> model, so a server implementing the current consumption API will not implement\n")
-		w("> these operations, and the round-trip below reports that rather than failing it.\n\n")
+		w("> these operations, and the round-trip below reports that instead of failing it.\n\n")
 	}
 	if p.ModelMismatch {
 		w("**This provider serves the publication endpoints but does not speak this document.**\n")
@@ -607,7 +607,7 @@ func (r Report) publisherSection() string {
 	}
 	if !p.Implemented {
 		w("This provider does not serve the publication specification. That is not a\n")
-		w("conformance failure — publication is a separate document, and a read-only mirror is\n")
+		w("conformance failure. Publication is a separate document, and a read-only mirror is\n")
 		w("a legitimate TEA server.\n\n")
 		if p.Detail != "" {
 			w("- %s\n\n", p.Detail)
@@ -634,14 +634,14 @@ func (r Report) publisherSection() string {
 
 // CatalogueMarkdown lists what this provider publishes.
 //
-// It is built the way a consumer would build it — page `/products`, then ask
-// each one for its newest release — so what it records is exactly what the API
-// serves, not what any database holds.
+// It is built the way a consumer would build it, by paging `/products` and
+// asking each one for its newest release. What it records is therefore exactly
+// what the API serves, not what any database holds.
 func (r Report) CatalogueMarkdown() string {
 	var b strings.Builder
 	w := func(format string, args ...any) { fmt.Fprintf(&b, format, args...) }
 
-	w("# Catalogue — %s\n\n", r.Provider)
+	w("# Catalogue for %s\n\n", r.Provider)
 	w("The products this provider publishes, as its own API serves them.\n\n")
 	w("| | |\n|---|---:|\n")
 	w("| Products published | %d |\n", len(r.Products))
@@ -681,13 +681,13 @@ func (r Report) residualMarkdown() string {
 	w := func(format string, args ...any) { fmt.Fprintf(&b, format, args...) }
 	p := r.Publisher
 
-	w("# Residual conformance records — %s\n\n", r.Provider)
+	w("# Residual conformance records for %s\n\n", r.Provider)
 	w("Generated %s.\n\n", r.GeneratedAt)
 	w("The conformance suite writes objects to exercise the publication specification and\n")
 	w("deletes them again as its final cases. Anything listed here survived that, so it is\n")
 	w("still in your catalogue.\n\n")
-	w("Every record is named deterministically from the run configuration — prefix `%s`,\n", p.NamePrefix)
-	w("key `%s` — so a re-run of the suite reclaims and removes them without any manual\n", p.RunKey)
+	w("Every record is named deterministically from the run configuration, prefix `%s`,\n", p.NamePrefix)
+	w("key `%s`, so a re-run of the suite reclaims and removes them without any manual\n", p.RunKey)
 	w("step. This list is for when you would rather purge them yourself.\n\n")
 	w("| | |\n|---|---|\n")
 	w("| API root | `%s` |\n", r.RootURL)
@@ -725,7 +725,7 @@ func (r Report) residualTable() string {
 	for _, rec := range p.Created {
 		state := tick(rec.Deleted)
 		if !rec.Deleted && rec.Note != "" {
-			state = "**no** — " + rec.Note
+			state = "**no**, " + rec.Note
 		}
 		w("| %s | `%s` | %s | %s | `DELETE %s` |\n",
 			rec.Kind, rec.UUID, dash(rec.Label), state, rec.DeletePath)
@@ -745,7 +745,7 @@ func caseTable(title string, results []runner.Result) string {
 	w("### %s\n\n", title)
 	w("| Case | Operation | Status | Schema | Latency | Verdict |\n|---|---|---:|---|---:|---|\n")
 	for _, res := range results {
-		schema := "—"
+		schema := "-"
 		if res.SchemaChecked {
 			schema = tick(res.SchemaValid)
 		}
@@ -756,7 +756,7 @@ func caseTable(title string, results []runner.Result) string {
 		case !res.Pass:
 			verdict = "advisory"
 		}
-		status := "—"
+		status := "-"
 		if res.GotStatus > 0 {
 			status = fmt.Sprint(res.GotStatus)
 		}
@@ -776,7 +776,7 @@ func caseTable(title string, results []runner.Result) string {
 		for _, res := range failures {
 			w("**%s**", res.Case)
 			if res.URL != "" {
-				w(" — `%s %s`", res.Method, res.URL)
+				w(": `%s %s`", res.Method, res.URL)
 			}
 			w("\n\n")
 			for _, e := range res.Errors {
@@ -804,21 +804,22 @@ func (r Report) methodSection() string {
 	w("above, fetched from their authoritative repository at the start of this run.\n\n")
 	w("OpenAPI 3.1 schema objects **are** JSON Schema 2020-12, so the specification's own\n")
 	w("bytes are what was enforced. There is no intermediate model that could drift from it.\n\n")
-	w("Assertions the schemas cannot express — collection and release UUID identity, lifecycle\n")
-	w("event ordering, pagination-token consistency, `additionalProperties:false` on error\n")
-	w("bodies — were checked separately against the normative prose and are reported as case\n")
-	w("failures in the same way as schema violations.\n\n")
+	w("Some of what the specification requires cannot be written as a schema. Collection and\n")
+	w("release UUID identity, lifecycle event ordering, pagination-token consistency and\n")
+	w("`additionalProperties:false` on error bodies were each checked separately against the\n")
+	w("normative prose, and are reported as case failures in the same way as schema\n")
+	w("violations.\n\n")
 	w("Every request and response is stored under `responses/`, named deterministically, so\n")
 	w("this report can be regenerated offline from that directory and checked against the\n")
 	w("bytes it was derived from.\n")
 	return b.String()
 }
 
-// ── small renderers ─────────────────────────────────────────────────────────
+// --- small renderers ---
 
 func dash(s string) string {
 	if strings.TrimSpace(s) == "" {
-		return "—"
+		return "-"
 	}
 	return s
 }
@@ -832,28 +833,28 @@ func tick(ok bool) string {
 
 func ms(v float64) string {
 	if v == 0 {
-		return "—"
+		return "-"
 	}
 	return fmt.Sprintf("%.2f ms", v)
 }
 
 func rate(v float64) string {
 	if v == 0 {
-		return "—"
+		return "-"
 	}
 	return fmt.Sprintf("%.0f", v)
 }
 
 func speedUp(v float64) string {
 	if v == 0 {
-		return "—"
+		return "-"
 	}
-	return fmt.Sprintf("%.1f×", v)
+	return fmt.Sprintf("%.1fx", v)
 }
 
 func variance(v float64) string {
 	if v == 0 {
-		return "—"
+		return "-"
 	}
 	return fmt.Sprintf("%.0f%%", v*100)
 }

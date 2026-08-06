@@ -35,7 +35,7 @@ func BuildCases(api *spec.API, f Fixtures) []runner.Case {
 	ok200 := func(id string) string { return api.OK200(id) }
 	ptr404 := func(id string) string { return api.Status(id, 404) }
 
-	// ── TEA Product ─────────────────────────────────────────────────────────
+	// --- TEA Product ---
 	add(listCases("queryTeaProducts", "/products", ok200("queryTeaProducts"),
 		CheckPaginated("uuid", "name", "identifiers"))...)
 	add(runner.Case{
@@ -62,7 +62,7 @@ func BuildCases(api *spec.API, f Fixtures) []runner.Case {
 	add(objectCases("getCleByProductId", "/product/", f.ProductUUID, "/cle",
 		ok200("getCleByProductId"), ptr404("getCleByProductId"), CheckCLE)...)
 
-	// ── TEA Product Release ─────────────────────────────────────────────────
+	// --- TEA Product Release ---
 	add(listCases("queryTeaProductReleases", "/productReleases",
 		ok200("queryTeaProductReleases"), CheckPaginated("uuid", "version", "createdDate"))...)
 	add(runner.Case{
@@ -103,7 +103,7 @@ func BuildCases(api *spec.API, f Fixtures) []runner.Case {
 		ok200("getCollectionForProductRelease"), ptr404("getCollectionForProductRelease"),
 		CheckCollection(f.ProductReleaseUUID, "PRODUCT_RELEASE"))...)
 
-	// ── TEA Component ───────────────────────────────────────────────────────
+	// --- TEA Component ---
 	add(listCases("queryTeaComponents", "/components", ok200("queryTeaComponents"),
 		CheckPaginated("uuid", "name", "identifiers"))...)
 	add(runner.Case{
@@ -124,7 +124,7 @@ func BuildCases(api *spec.API, f Fixtures) []runner.Case {
 	add(objectCases("getCleByComponentId", "/component/", f.ComponentUUID, "/cle",
 		ok200("getCleByComponentId"), ptr404("getCleByComponentId"), CheckCLE)...)
 
-	// ── TEA Component Release ───────────────────────────────────────────────
+	// --- TEA Component Release ---
 	add(listCases("queryTeaComponentReleases", "/componentReleases",
 		ok200("queryTeaComponentReleases"), CheckPaginated("uuid", "version", "createdDate"))...)
 
@@ -172,7 +172,7 @@ func BuildCases(api *spec.API, f Fixtures) []runner.Case {
 		ok200("getCollection"), ptr404("getCollection"),
 		CheckCollection(f.ComponentReleaseUUID, "COMPONENT_RELEASE"))...)
 
-	// ── TEA Artifact ────────────────────────────────────────────────────────
+	// --- TEA Artifact ---
 	if f.ArtifactSeen {
 		add(objectCases("getLatestArtifact", "/artifact/", f.ArtifactUUID, "/latest",
 			ok200("getLatestArtifact"), ptr404("getLatestArtifact"),
@@ -197,7 +197,7 @@ func BuildCases(api *spec.API, f Fixtures) []runner.Case {
 		})
 	}
 
-	// ── TEA Discovery ───────────────────────────────────────────────────────
+	// --- TEA Discovery ---
 	// The /discovery operation is declared by the consumption specification, so
 	// it is exercised here; the DNS and .well-known steps that lead a consumer
 	// to it are the discovery area's business.
@@ -223,7 +223,7 @@ func BuildCases(api *spec.API, f Fixtures) []runner.Case {
 		Path: "/discovery", Query: url.Values{"tei": {"not-a-tei"}}, WantStatus: 400,
 	})
 
-	// ── Authentication ──────────────────────────────────────────────────────
+	// --- Authentication ---
 	//
 	// The specification declares bearer and basic security schemes for the
 	// whole API, and declares no 401 body, so these are status-only. What it
@@ -268,7 +268,7 @@ func Number(cases []runner.Case, area config.Area, base int) []runner.Case {
 	return cases
 }
 
-// ── Case templates ──────────────────────────────────────────────────────────
+// --- Case templates ---
 
 // listCases covers a paginated collection endpoint: the default page, an
 // explicit small page, and every way the pagination parameters can be invalid.
@@ -356,7 +356,7 @@ func versionCases(opID, prefix, paramName, schema200, schema404 string, check fu
 	}
 }
 
-// ── Body assertions the schemas cannot express ──────────────────────────────
+// --- Body assertions the schemas cannot express ---
 
 // CheckPaginated verifies the envelope invariants the specification states in
 // prose: nextPageToken is present in every response, and every result carries
@@ -489,8 +489,8 @@ func RequireComponentRefs(b []byte) error {
 	return nil
 }
 
-// CheckCollection asserts tea-collection.md's identity rule — a collection's
-// uuid equals the uuid of the release it belongs to — and that the
+// CheckCollection asserts tea-collection.md's identity rule, that a collection's
+// uuid equals the uuid of the release it belongs to, and that the
 // discriminator names the right flavour.
 func CheckCollection(releaseUUID, belongsTo string) func([]byte) error {
 	return func(b []byte) error {

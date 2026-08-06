@@ -5,7 +5,7 @@
 //
 // Everything else in this suite depends on this package's output, because
 // everything else needs an API root. That is also why resolution runs even when
-// the discovery area is excluded from a run — the difference is only whether
+// the discovery area is excluded from a run. The difference is only whether
 // its findings are reported.
 package discovery
 
@@ -75,7 +75,7 @@ type Resolution struct {
 	Explicit bool `json:"explicit,omitempty"`
 	// SpecVersionMatch is false when the endpoint's advertised version is a
 	// different TEA generation from the specification being validated against.
-	// The run continues — the report says which document it judged by.
+	// The run continues, and the report says which document it judged by.
 	SpecVersionMatch bool `json:"specVersionMatch"`
 
 	Ready bool   `json:"ready"`
@@ -163,7 +163,7 @@ func Resolve(
 	results = append(results, result)
 
 	if res.Document == nil && len(result.Body) > 0 {
-		// The case failed before the check ran — a non-200, most likely. Parse
+		// The case failed before the check ran, most likely a non-200. Parse
 		// anyway so the report can still say what was served.
 		if doc, err := parseWellKnown(result.Body); err == nil {
 			res.Document = doc

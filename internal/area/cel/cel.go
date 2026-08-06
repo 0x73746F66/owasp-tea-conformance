@@ -8,7 +8,7 @@
 // either way a client generated from the specification will write expressions
 // that quietly do not mean what its author thought.
 //
-// Every expression here is therefore compiled twice — once locally against
+// Every expression here is therefore compiled twice: once locally against
 // google/cel-go, which is the reference implementation, and once by the server.
 // The finding is the disagreement, not either result on its own.
 package cel
@@ -46,7 +46,7 @@ type Expression struct {
 	// cannot judge on its own.
 	//
 	// The Insights specification does not publish a type for its variables, so
-	// they are declared dynamically here — which is the honest thing to do and
+	// they are declared dynamically here, which is the honest thing to do and
 	// costs exactly one thing: an expression like `component.name` is a string
 	// to a server that knows its own schema and is type `dyn` to a compiler
 	// that does not. The server must still reject it, and the cross-check must
@@ -121,7 +121,7 @@ func Catalogue(f insightsarea.Fixtures) []Expression {
 		{Name: "an assignment", Text: "component.name = 'x'", Valid: false,
 			Why: "CEL has no assignment; a permissive parser may accept it as equality"},
 		{Name: "a SQL fragment", Text: "1=1 OR '1'='1'", Valid: false,
-			Why: "not CEL at all — a server that accepts it is not parsing CEL"},
+			Why: "not CEL at all; a server that accepts it is not parsing CEL"},
 		{Name: "an empty expression", Text: "", Valid: false,
 			Why: "the request schema requires a non-empty expression"},
 	}
@@ -141,7 +141,7 @@ func Run(
 			Area: config.AreaCEL, Seq: 0,
 			OperationID: "postStaticInsights",
 			Case:        "the query language was not exercised: this provider does not serve Insights",
-			Category:    "cel", Method: "—", Pass: true, Optional: true,
+			Category:    "cel", Method: "-", Pass: true, Optional: true,
 		}}, found
 	}
 
@@ -150,7 +150,7 @@ func Run(
 		return []runner.Result{{
 			Area: config.AreaCEL, Seq: 0,
 			Case:     "build the reference CEL environment",
-			Category: "cel", Method: "—",
+			Category: "cel", Method: "-",
 			Errors: []string{"harness: " + err.Error()},
 		}}, found
 	}
@@ -209,7 +209,7 @@ func Run(
 			Server:     server,
 		})
 		results[i].Errors = append(results[i].Errors, fmt.Sprintf(
-			"the reference CEL implementation %s while this server %s — a client generated "+
+			"the reference CEL implementation %s while this server %s. A client generated "+
 				"from the specification would write expressions this server does not read the "+
 				"same way", reference, server))
 		results[i].Pass = false

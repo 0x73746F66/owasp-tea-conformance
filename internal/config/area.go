@@ -15,7 +15,7 @@ import (
 type Area string
 
 const (
-	// AreaDiscovery starts where a consumer starts — a DNS name — and follows
+	// AreaDiscovery starts where a consumer starts, at a DNS name, and follows
 	// the specification's resolution chain to an API root.
 	AreaDiscovery Area = "discovery"
 	// AreaConsumer is the consumption OpenAPI document: the object graph, its
@@ -28,7 +28,7 @@ const (
 	// responses are CycloneDX documents.
 	AreaInsights Area = "insights"
 	// AreaCEL is the query language Insights is driven by, tested against the
-	// reference CEL implementation rather than only against the server.
+	// reference CEL implementation, not only against the server.
 	AreaCEL Area = "cel"
 	// AreaPurl is package-URL handling: identifiers, filters and purl-typed
 	// TEIs.

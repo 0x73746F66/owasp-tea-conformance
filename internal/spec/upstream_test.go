@@ -16,7 +16,7 @@ import (
 //
 // The rest of this package's tests use a small local document so they run
 // anywhere. These fetch what the suite will actually validate against, and are
-// the ones that notice when upstream changes underneath us — an operation
+// the ones that notice when upstream changes underneath us: an operation
 // added, a schema renamed, the publication document moved.
 //
 // Skipped unless TEA_CONFORMANCE_ONLINE is set, so a network outage or a rate
@@ -242,7 +242,7 @@ func TestUpstreamPublicationSpecificationIsUsable(t *testing.T) {
 		if consumer := fetchUpstream(t, KindConsumer); true {
 			doc, _ := consumer.Get(KindConsumer)
 			if consumerAPI, err := LoadAPI(KindConsumer, doc.URL, doc.Raw()); err == nil {
-				t.Logf("note: the consumption specification beside it is %s — the two "+
+				t.Logf("note: the consumption specification beside it is %s. The two "+
 					"documents are different TEA generations and do not share an object model",
 					consumerAPI.Version)
 			}

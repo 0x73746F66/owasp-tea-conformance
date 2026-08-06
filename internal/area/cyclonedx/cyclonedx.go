@@ -130,7 +130,7 @@ func Run(ctx context.Context, c *runner.Client, inv inventory.Inventory, concurr
 			Area: config.AreaCycloneDX, Seq: 0,
 			Case: fmt.Sprintf("%d further BOM document(s) were not downloaded (limit %d)",
 				found.Skipped, DownloadLimit),
-			Category: "coverage", Method: "—", Pass: true, Optional: true,
+			Category: "coverage", Method: "-", Pass: true, Optional: true,
 		})
 	}
 	return results, found
@@ -275,5 +275,5 @@ func short(s string) string {
 	if len(s) <= 16 {
 		return s
 	}
-	return s[:16] + "…"
+	return s[:16] + "..."
 }

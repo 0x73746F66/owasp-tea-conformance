@@ -46,7 +46,7 @@ func TestDuplicateKeysAcceptsACleanDocument(t *testing.T) {
 
 func TestLoadAPIParsesJSONWithADuplicateKey(t *testing.T) {
 	// A YAML parser refuses this outright. Every JSON parser accepts it and
-	// keeps the last definition, so the suite has to as well — and say so.
+	// keeps the last definition, so the suite has to as well, and say so.
 	doc := `{
 	  "openapi": "3.1.1",
 	  "info": {"title": "Dup", "version": "0.0.2"},

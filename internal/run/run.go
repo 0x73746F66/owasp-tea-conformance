@@ -72,7 +72,7 @@ func Provider(ctx context.Context, cfg *config.Config, p config.Resolved, opt Op
 	}
 
 	rep := report.Report{
-		Title:       "OWASP Transparency Exchange API — conformance report",
+		Title:       "OWASP Transparency Exchange API conformance report",
 		GeneratedAt: opt.Now().UTC().Format(time.RFC3339),
 		Mode:        opt.Mode.String(),
 		Provider:    p.Name,
@@ -95,7 +95,7 @@ func Provider(ctx context.Context, cfg *config.Config, p config.Resolved, opt Op
 	rec := httpx.New(opt.Mode, dir, retain, httpx.DefaultClient())
 	rec.ColdHTTP = httpx.ColdClient()
 
-	// ── Specifications ──────────────────────────────────────────────────────
+	// --- Specifications ---
 	kinds := spec.KindsFor(p.Areas)
 	var bundle spec.Bundle
 	var err error
@@ -137,7 +137,7 @@ func Provider(ctx context.Context, cfg *config.Config, p config.Resolved, opt Op
 		return rep, fmt.Errorf("the consumption specification could not be compiled")
 	}
 
-	// ── Discovery ───────────────────────────────────────────────────────────
+	// --- Discovery ---
 	//
 	// Always run, even when the area is excluded: every other area needs the
 	// root it produces. Only its findings are conditional.
@@ -175,7 +175,7 @@ func Provider(ctx context.Context, cfg *config.Config, p config.Resolved, opt Op
 		Rec:     rec,
 	}
 
-	// ── Fixtures ────────────────────────────────────────────────────────────
+	// --- Fixtures ---
 	fixtures, err := consumer.NewSeeder(client).Seed(ctx, p.DNS)
 	fixtures.Authenticated = client.Auth != ""
 	rep.Fixtures = fixtures
@@ -186,7 +186,7 @@ func Provider(ctx context.Context, cfg *config.Config, p config.Resolved, opt Op
 	}
 	opt.Log("fixtures: product %s (%s)", fixtures.ProductUUID, fixtures.ProductName)
 
-	// ── Areas ───────────────────────────────────────────────────────────────
+	// --- Areas ---
 	if p.HasArea(config.AreaConsumer) {
 		cases := consumer.BuildCases(consumerAPI, fixtures)
 		rep.Results = append(rep.Results, runner.Run(ctx, client, consumerAPI, cases, opt.Concurrency)...)
@@ -278,7 +278,7 @@ func Provider(ctx context.Context, cfg *config.Config, p config.Resolved, opt Op
 			rep.Publisher.Detail = "a dry run writes nothing, and every publication operation " +
 				"writes; the publication round-trip was not probed"
 			rep.Results = append(rep.Results, runner.Result{
-				Area: config.AreaProvider, Seq: 1, Method: "—",
+				Area: config.AreaProvider, Seq: 1, Method: "-",
 				Case:     "the publication round-trip was not run in dry-run mode",
 				Category: "publication", Pass: true, Optional: true,
 			})
@@ -395,9 +395,9 @@ func wellKnownSchema(bundle spec.Bundle) (*jsonschema.Schema, error) {
 func credentialLabel(p config.Resolved) string {
 	switch {
 	case p.Auth.Scheme == config.AuthNone || p.Auth.CredentialEnv == "":
-		return "none — this catalogue was read unauthenticated"
+		return "none: this catalogue was read unauthenticated"
 	case p.CredentialMissing:
-		return fmt.Sprintf("**missing** — %s is not set in the environment", p.Auth.CredentialEnv)
+		return fmt.Sprintf("**missing**: %s is not set in the environment", p.Auth.CredentialEnv)
 	default:
 		return fmt.Sprintf("%s credential from $%s", p.Auth.Scheme, p.Auth.CredentialEnv)
 	}
@@ -413,7 +413,7 @@ func specSummary(bundle spec.Bundle) string {
 
 func dashed(s string) string {
 	if s == "" {
-		return "—"
+		return "-"
 	}
 	return s
 }

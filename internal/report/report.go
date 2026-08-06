@@ -48,9 +48,9 @@ type Report struct {
 	Fixtures  consumer.Fixtures    `json:"fixtures"`
 	Efficacy  inventory.Stats      `json:"efficacy"`
 	// Products is the catalogue as the API serves it, built by paging
-	// /products rather than read from anywhere else. It is the claim itself —
-	// these specific projects are published as TEA products — and a reader
-	// should be able to check it rather than take it on faith.
+	// /products and never read from anywhere else. It is the claim itself:
+	// these specific projects are published as TEA products. A reader
+	// should be able to check it instead of taking it on faith.
 	Products  []inventory.Product `json:"products,omitempty"`
 	Purl      purlarea.Findings   `json:"purl"`
 	CycloneDX cdxarea.Findings    `json:"cyclonedx"`
@@ -70,7 +70,7 @@ type Report struct {
 
 	// Coverage records which of the specifications' operations were exercised.
 	// A conformance claim is only as good as its coverage, so an unexercised
-	// operation is reported rather than silently omitted.
+	// operation is reported, never silently omitted.
 	Coverage []Coverage `json:"coverage"`
 
 	// Errors are conditions that broke the run itself rather than findings
@@ -237,7 +237,7 @@ func specTitle(kind spec.Kind) string {
 //
 // Three things count: every non-advisory case passed, every operation of the
 // specifications the run covered was exercised, and nothing regressed under
-// load. All three matter — a run that skipped operations is not a conformance
+// load. All three matter. A run that skipped operations is not a conformance
 // result however green the cases it did run, and a server that answers
 // correctly once but not under concurrency has not demonstrated conformance
 // either.
@@ -316,8 +316,8 @@ func (r Report) Write(dir string, splitByArea bool) ([]string, error) {
 	}
 
 	// The catalogue listing is always its own file. It answers a different
-	// question from the conformance verdict — what is in here, rather than is
-	// it correct — and a reader usually wants one without the other.
+	// question from the conformance verdict: what is in here, not whether
+	// it is correct. A reader usually wants one without the other.
 	if len(r.Products) > 0 {
 		path := filepath.Join(reportDir, "catalogue.md")
 		if err := os.WriteFile(path, []byte(r.CatalogueMarkdown()), 0o644); err != nil {

@@ -15,7 +15,7 @@ import (
 // The TEA enum also names MD5, SHA-1 and the BLAKE families. The first two
 // prove nothing about integrity against a motivated party and the last are not
 // in the standard library, so an unrecognised algorithm reports "not checked"
-// rather than a failure — the alternative would be to claim verification the
+// and not a failure. The alternative would be to claim verification the
 // suite did not perform.
 func VerifyDigest(algType string, body []byte) (string, bool) {
 	var h hash.Hash
@@ -58,5 +58,5 @@ func shortDigest(s string) string {
 	if len(s) <= 16 {
 		return s
 	}
-	return s[:16] + "…"
+	return s[:16] + "..."
 }

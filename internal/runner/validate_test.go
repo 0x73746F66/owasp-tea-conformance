@@ -4,7 +4,7 @@ package runner
 //
 // A conformance report is only worth the validator behind it. A validator that
 // silently accepted everything would produce exactly the same green report as a
-// correct one, so these tests assert that known-bad payloads are *rejected* —
+// correct one, so these tests assert that known-bad payloads are *rejected*.
 // and name the specific rule each one breaks. The positive controls exist so
 // the negative ones cannot be satisfied by a validator that rejects everything
 // instead.

@@ -67,7 +67,7 @@ func Run(
 	found := Findings{Types: map[string]int{}}
 	var results []runner.Result
 
-	// ── The purls this provider already publishes ───────────────────────────
+	// --- The purls this provider already publishes ---
 	//
 	// Checked locally rather than over the wire: a malformed identifier is a
 	// fact about the response already in hand, and re-requesting it to say so
@@ -95,7 +95,7 @@ func Run(
 		OperationID: "queryTeaProducts",
 		Case:        "every published PURL identifier is well formed",
 		Category:    "purl",
-		Method:      "—",
+		Method:      "-",
 		Pass:        len(found.Malformed) == 0,
 	}
 	if len(found.Malformed) > 0 {
@@ -105,7 +105,7 @@ func Run(
 	}
 	results = append(results, local)
 
-	// ── The round-trip ──────────────────────────────────────────────────────
+	// --- The round-trip ---
 	//
 	// A purl the provider published must find the object it was published on.
 	// This is the check that catches a server which stores identifiers but
@@ -144,7 +144,7 @@ func Run(
 	results = append(results, runner.Run(ctx, c, api,
 		consumer.Number(cases, config.AreaPurl, seqRoundTrip), concurrency)...)
 
-	// ── purl-typed TEIs ─────────────────────────────────────────────────────
+	// --- purl-typed TEIs ---
 	//
 	// urn:tei:purl:<domain>:<purl> is one of the identifier types the discovery
 	// specification defines, and the only one a consumer can construct without
@@ -171,7 +171,7 @@ func Run(
 	results = append(results, runner.Run(ctx, c, api,
 		consumer.Number(teiCases, config.AreaPurl, seqTEI), concurrency)...)
 
-	// ── The configured sample ───────────────────────────────────────────────
+	// --- The configured sample ---
 	found.Sample = runSample(ctx, c, api, packages, concurrency, &results)
 
 	return results, found
@@ -227,7 +227,7 @@ func runSample(
 			out.Absent = append(out.Absent, sorted[i])
 		}
 	}
-	// The per-package results stay out of the case tally — three hundred rows
+	// The per-package results stay out of the case tally, because three hundred rows
 	// saying "this provider does not publish somebody else's package" would
 	// bury the conformance findings. The summary below carries the outcome.
 	summary := runner.Result{

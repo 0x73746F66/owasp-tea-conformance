@@ -9,7 +9,7 @@
 //     suite that only checked the Insights document would be validating almost
 //     nothing.
 //   - The queries are the specification's own worked examples. The API is
-//     motivated by "does product X use this library, and is it exposed" — so
+//     motivated by "does product X use this library, and is it exposed", so
 //     those exact expressions are the case catalogue. An implementation that
 //     cannot compile the specification's own examples is not conformant however
 //     well-formed its output.
@@ -70,7 +70,7 @@ type Findings struct {
 // Root derives the Insights root from a TEA API root.
 //
 // Insights shares an origin with the TEA API and sits at /insights, outside the
-// version prefix — which is also how the specification's own server URL plus
+// version prefix, which is also how the specification's own server URL plus
 // its /insights/static path resolve.
 func Root(teaRoot string) string {
 	u, err := url.Parse(teaRoot)
@@ -260,7 +260,7 @@ func BuildCases(api *spec.API, f Fixtures) []runner.Case {
 			WantStatus:   401,
 			AcceptStatus: []int{403},
 			// A public Insights deployment is legitimate, so this is evidence
-			// about the deployment rather than about the specification.
+			// about the deployment and not about the specification.
 			Optional: true,
 		},
 
@@ -293,7 +293,7 @@ func BuildCases(api *spec.API, f Fixtures) []runner.Case {
 		},
 
 		// Dynamic. A deployment with no inference backend answers 503, which is
-		// a configuration fact rather than a conformance failure.
+		// a configuration fact and not a conformance failure.
 		{
 			OperationID: "postDynamicInsights", Name: "natural-language query", Category: "insights",
 			Method: http.MethodPost, Path: "/dynamic",
@@ -351,7 +351,7 @@ func payload(v map[string]any) []byte {
 // RequireCycloneDX asserts the response really is a usable CycloneDX document.
 //
 // Validation goes through the shared CycloneDX module, so whichever version the
-// server answered with is validated against that version's schema — which is
+// server answered with is validated against that version's schema, which is
 // also what makes the 1.6-default and 1.7-negotiated cases meaningful rather
 // than a string comparison.
 func RequireCycloneDX(body []byte) error {

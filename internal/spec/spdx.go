@@ -8,7 +8,7 @@ import (
 
 // LicenseList is the SPDX licence list, as published by the SPDX project.
 //
-// It is fetched rather than embedded for the same reason the API
+// It is fetched, never embedded, for the same reason the API
 // specifications are: the list gains identifiers and deprecates others, and a
 // suite that judged a provider against a copy frozen at build time would
 // eventually report a correct licence as invalid.
@@ -17,7 +17,7 @@ type LicenseList struct {
 	// IDs maps a canonical identifier to whether SPDX has deprecated it.
 	IDs map[string]bool
 	// Canonical maps a lowercased identifier back to its canonical spelling,
-	// so a case error can be reported as a case error rather than as an
+	// so a case error can be reported as a case error and not as an
 	// unknown licence.
 	Canonical map[string]string
 	// Exceptions are the licence-exception identifiers usable after WITH.
@@ -80,7 +80,7 @@ const (
 
 // Check classifies a single identifier. `LicenseRef-` names are a legitimate
 // escape hatch in the SPDX grammar for a licence with no identifier, so they
-// are accepted rather than reported as unknown.
+// are accepted and not reported as unknown.
 func (l *LicenseList) Check(id string) (Verdict, string) {
 	id = strings.TrimSpace(id)
 	if id == "" {
@@ -112,7 +112,7 @@ type ExpressionProblem struct {
 // CheckExpression validates an SPDX licence expression: the identifiers joined
 // by AND, OR and WITH, with parentheses.
 //
-// It is deliberately a token check rather than a full grammar parse. The
+// It is deliberately a token check and not a full grammar parse. The
 // question this suite asks is "would a consumer resolve every identifier in
 // here", and an expression whose operators are misplaced but whose identifiers
 // are all real is a different, lesser problem than one naming a licence that
@@ -135,7 +135,7 @@ func (l *LicenseList) CheckExpression(expr string) []ExpressionProblem {
 			problems = append(problems, ExpressionProblem{Token: token, Verdict: verdict,
 				Hint: "SPDX identifiers are case-sensitive; the canonical spelling is " + canonical})
 		default:
-			// A WITH operand is an exception rather than a licence, so check
+			// A WITH operand is an exception and not a licence, so check
 			// that table before calling it unknown.
 			if _, ok := l.Exceptions[token]; ok {
 				continue

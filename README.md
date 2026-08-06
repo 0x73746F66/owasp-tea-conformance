@@ -2,10 +2,10 @@
 
 A conformance and performance test suite for the [OWASP Transparency Exchange
 API][tea]. Point it at a provider's DNS name and it follows the specification's
-own discovery chain to that provider's API, then checks the whole surface —
+own discovery chain to that provider's API, then checks the whole surface:
 consumption, publication, Insights, CEL, purls, CycloneDX, SPDX licences,
-provenance and latency — against the specifications fetched live from their
-authoritative repositories.
+provenance and latency. Everything is checked against the specifications, fetched
+live from their authoritative repositories.
 
 It is a black-box HTTP client. It knows nothing about any implementation, every
 judgement comes from comparing a response against the specification's own bytes,
@@ -26,10 +26,10 @@ and checked offline.
 | `insights` | The Insights API answers the specification's own worked examples with valid CycloneDX, defaults to 1.6 and negotiates 1.7 |
 | `cel` | The server's idea of the query language matches `google/cel-go`, the reference implementation |
 | `provenance` | Checksum, signature and attestation coverage, and whatever attestations exist parse as in-toto statements |
-| `performance` | Cold latency and cached latency, measured and reported separately, with spread — and correctness under concurrency |
-| `provider` | The publication API, as a create → revise → read-back → delete round-trip |
+| `performance` | Cold latency and cached latency, measured and reported separately, with spread, plus correctness under concurrency |
+| `provider` | The publication API, as a create -> revise -> read-back -> delete round-trip |
 
-Two things are reported alongside rather than as pass/fail. **Efficacy** is what
+Two things are reported alongside, and not as pass/fail. **Efficacy** is what
 the published graph actually contains: conformance cannot tell a complete
 publisher from one that emits a tenth of its data, because both validate. The
 **open-source sample** is how much of a known 300-project set a catalogue
@@ -52,7 +52,7 @@ output:
 
 packages:                      # the open-source sample, as purls
   - pkg:github/apache/echarts
-  # …300 of them ship in the example
+  # ...300 of them ship in the example
 
 providers:
   - name: vulnetix
@@ -67,18 +67,18 @@ providers:
     packages: []               # empty inherits the global list
 ```
 
-Credentials are never written in the file — only the name of the environment
+Credentials are never written in the file. Only the name of the environment
 variable holding one. A provider with no credential is read unauthenticated, and
 the report says so.
 
 `scheme` is `none`, `bearer`, `basic`, `apikey`, or `header`. Use `header` when
-the value arrives already rendered — from a vendor's CLI, a credential helper or
+the value arrives already rendered: from a vendor's CLI, a credential helper or
 a token broker: it is sent verbatim, so there is nothing for the suite and
 whatever produced it to disagree about.
 
-`just plan` prints exactly what the file resolves to — which areas run against
+`just plan` prints exactly what the file resolves to: which areas run against
 which provider, where each report lands, and which credentials are missing from
-your environment — without making a single request. Run it after any edit.
+your environment. It makes no network requests at all. Run it after any edit.
 
 ### Which specifications are used
 
@@ -95,7 +95,7 @@ and both are disclosed in every report the suite writes:
   describes products, *leaves* and collections. The suite detects which model a
   document describes and runs the matching round-trip, so a server implementing
   the current consumption API reports the publication operations as
-  not-implemented rather than as failures. `config.example.yaml` shows how to
+  not-implemented and not as failures. `config.example.yaml` shows how to
   point `specs.publisher` at the publication overlay proposed for the 0.4.x
   model instead.
 - **The Insights specification is not upstream yet.** The example points at the
@@ -103,13 +103,13 @@ and both are disclosed in every report the suite writes:
 
 The publication document also declares `components.responses` and
 `components.parameters` twice. JSON parsers keep the last definition, so the
-suite parses JSON documents with a JSON parser — as any client would — and
+suite parses JSON documents with a JSON parser, as any client would, and
 reports the duplication instead of failing on it.
 
 ### The publication round-trip writes to your provider
 
 The `provider` area creates real objects. They are named deterministically from
-`writeCycle` in the config, and the round-trip's final cases delete them — so
+`writeCycle` in the config, and the round-trip's final cases delete them, so
 verifying that delete works *is* the cleanup, and a re-run reclaims anything an
 interrupted run left behind. Whatever survives is listed in `reports/residual.md`
 with the exact `DELETE` request that removes it.
@@ -149,7 +149,7 @@ attempted.
 `--reproduce-from-dir` makes no network requests at all. It reads the
 specifications and every recorded response out of a previous run's directory and
 regenerates the reports from them. A missing recording is a hard error naming the
-file it expected, so a directory that cannot reproduce a run says so rather than
+file it expected, so a directory that cannot reproduce a run says so instead of
 quietly producing a different report.
 
 ## Output
@@ -165,7 +165,7 @@ reports/<provider>/
 ```
 
 `catalogue.md` lists what the provider publishes, built by paging `/products`
-and asking each one for its newest release — the claim itself, rather than the
+and asking each one for its newest release. That is the claim itself, rather than the
 verdict on it. `residual.md` appears only when the publication round-trip ran.
 
 `--markdown single|split` overrides the configured layout for one invocation,
@@ -174,7 +174,7 @@ recordings where they are. Together they let a recorded run be re-rendered for
 another destination without disturbing the evidence.
 
 Recording filenames are derived from the area, a deterministic sequence number
-and the case name — never from execution order — which is what lets a replay ask
+and the case name, never from execution order. That is what lets a replay ask
 for the same files in the same order. Authorization headers are redacted from the
 stored requests.
 

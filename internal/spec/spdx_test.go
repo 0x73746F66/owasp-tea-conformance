@@ -70,7 +70,7 @@ func TestCheckExpressionWalksTheOperators(t *testing.T) {
 		t.Fatal("an expression naming a licence that does not exist was accepted")
 	}
 	// The operands are checked individually, so the report names the token that
-	// is wrong rather than the whole expression.
+	// is wrong and not the whole expression.
 	for _, p := range problems {
 		if p.Token == "MIT" {
 			t.Errorf("a valid operand was reported as a problem: %+v", p)

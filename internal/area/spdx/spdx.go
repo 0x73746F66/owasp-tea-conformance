@@ -79,7 +79,7 @@ func Run(
 	}
 	var results []runner.Result
 
-	// ── Licences inside the BOM documents ───────────────────────────────────
+	// --- Licences inside the BOM documents ---
 	for _, doc := range docs.Documents {
 		if len(doc.Raw) == 0 || !doc.Valid {
 			continue
@@ -100,7 +100,7 @@ func Run(
 		}
 	}
 
-	// ── The lifecycle documents' licence field ──────────────────────────────
+	// --- The lifecycle documents' licence field ---
 	sampled := sampleReleases(inv)
 	if n := len(inv.Releases) - len(sampled); n > 0 {
 		found.CLESkipped = n
@@ -135,7 +135,7 @@ func Run(
 	}
 	results = append(results, cleResults...)
 
-	// ── The verdict ─────────────────────────────────────────────────────────
+	// --- The verdict ---
 	sort.Slice(found.Problems, func(i, j int) bool {
 		if found.Problems[i].Identifier != found.Problems[j].Identifier {
 			return found.Problems[i].Identifier < found.Problems[j].Identifier
@@ -148,7 +148,7 @@ func Run(
 		OperationID: "licenceIdentifiers",
 		Case:        "every published licence identifier resolves against the SPDX licence list",
 		Category:    "spdx",
-		Method:      "—",
+		Method:      "-",
 	}
 	switch {
 	case found.Checked == 0:
@@ -171,7 +171,7 @@ func Run(
 			OperationID: "licenceIdentifiers",
 			Case: fmt.Sprintf("%d identifier(s) are real but deprecated by SPDX",
 				found.Deprecated),
-			Category: "spdx", Method: "—", Pass: true, Optional: true,
+			Category: "spdx", Method: "-", Pass: true, Optional: true,
 		})
 	}
 	if found.CLESkipped > 0 {
@@ -179,7 +179,7 @@ func Run(
 			Area: config.AreaSPDX, Seq: 2,
 			Case: fmt.Sprintf("%d further lifecycle document(s) were not read (limit %d)",
 				found.CLESkipped, CLESampleLimit),
-			Category: "coverage", Method: "—", Pass: true, Optional: true,
+			Category: "coverage", Method: "-", Pass: true, Optional: true,
 		})
 	}
 	return results, found
@@ -279,14 +279,14 @@ func summarise(problems []Problem, max int) []string {
 		if p.Verdict == "deprecated" {
 			continue
 		}
-		key := p.Identifier + " — " + p.Reason
+		key := p.Identifier + ": " + p.Reason
 		if seen[key] {
 			continue
 		}
 		seen[key] = true
 		out = append(out, key)
 		if len(out) == max {
-			out = append(out, "…")
+			out = append(out, "...")
 			break
 		}
 	}

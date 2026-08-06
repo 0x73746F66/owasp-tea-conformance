@@ -113,7 +113,7 @@ func app() error {
 	failed := 0
 	for _, p := range providers {
 		if !f.quiet {
-			fmt.Fprintf(os.Stderr, "\n%s (%s) — %s\n", p.Name, dashed(p.DNS),
+			fmt.Fprintf(os.Stderr, "\n%s (%s): %s\n", p.Name, dashed(p.DNS),
 				config.JoinAreas(p.Areas, ", "))
 		}
 		if p.CredentialMissing && !f.quiet {
@@ -166,11 +166,11 @@ func summarise(rep report.Report, written []string, f flags) {
 		fmt.Printf("  ! %s\n", e)
 	}
 	if n := len(rep.Publisher.Residual); n > 0 {
-		fmt.Printf("  ! %d record(s) were left in this provider's catalogue — see residual.md\n", n)
+		fmt.Printf("  ! %d record(s) were left in this provider's catalogue; see residual.md\n", n)
 	}
 	if !f.quiet {
 		for _, path := range written {
-			fmt.Printf("  → %s\n", path)
+			fmt.Printf("  -> %s\n", path)
 		}
 	}
 }
@@ -246,7 +246,7 @@ func boolPtr(b bool) *bool { return &b }
 
 func dashed(s string) string {
 	if strings.TrimSpace(s) == "" {
-		return "—"
+		return "-"
 	}
 	return s
 }

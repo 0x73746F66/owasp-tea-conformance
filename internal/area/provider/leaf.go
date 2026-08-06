@@ -3,7 +3,7 @@ package provider
 // The older publication model.
 //
 // Upstream publishes spec/publisher/openapi.json at version 0.0.2, describing
-// products, *leaves* and collections — a TEA generation before the consumption
+// products, *leaves* and collections. That is a TEA generation before the consumption
 // specification beside it, which is 0.4.0 and describes products, components
 // and releases. The two do not share an object model or a naming scheme, and a
 // server implementing either one is implementing a real published document.
@@ -37,7 +37,7 @@ func (f *flow) leafRoundTrip() {
 }
 
 // productTEI is how this model addresses a product: its path parameter is a TEI
-// URN rather than the identifier the create call returned.
+// URN and not the identifier the create call returned.
 func (f *flow) productTEI() string {
 	return "urn:tei:purl:" + f.authority + ":" + f.found.PURL
 }
@@ -88,13 +88,13 @@ func (f *flow) createLeafProduct() {
 		WantStatus: status,
 		SchemaPtr:  schema,
 	})
-	// This model names the assigned identifier `identifier` rather than `uuid`.
+	// This model names the assigned identifier `identifier` and not `uuid`.
 	f.productUUID = identifierOf(res.Body)
 
 	// A 400 on the very first write, from a server that answered 401 to the
 	// anonymous probe a moment earlier, means the endpoint is there and does
 	// not speak this document. That is the two upstream specifications being
-	// different generations, not a defect in the provider — the request body
+	// different generations, not a defect in the provider: the request body
 	// this model defines is simply not the one the provider implements.
 	if res.GotStatus == http.StatusBadRequest {
 		f.found.ModelMismatch = true
@@ -213,7 +213,7 @@ func (f *flow) finishLeafModel() {
 			Path:        record.DeletePath,
 			WantStatus:  want,
 			// A cascading delete removes children with their parent, so a child
-			// already gone is correct rather than a failure.
+			// already gone is correct, not a failure.
 			AcceptStatus: []int{http.StatusNotFound},
 		})
 		f.markDeleted(target.kind, res.GotStatus,
