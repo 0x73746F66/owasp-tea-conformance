@@ -1,0 +1,14 @@
+# Build output
+/bin/
+/tea-conformance
+
+# Run output. Reports are generated, never committed by default — a run carries
+# a provider's response bodies and those are theirs, not this repository's.
+/reports/
+
+# Local configuration, which is where credentials' env-var names and private
+# provider domains end up.
+/config.yaml
+/config.local.yaml
+
+.DS_Store

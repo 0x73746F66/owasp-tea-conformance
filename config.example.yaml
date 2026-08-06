@@ -1,0 +1,446 @@
+# OWASP TEA conformance suite — example configuration.
+#
+# Copy to config.yaml and edit. The two levels below are deliberate: the global
+# block is the default for every provider, and each provider says only what is
+# different about it.
+#
+#   just plan      show what this file resolves to, without making any request
+#   just run       run every provider
+#   just run NAME  run one
+
+version: 1
+
+# Where each specification is fetched from. Every run fetches them afresh and
+# writes the exact bytes it used into its own output directory, so a report is
+# always checkable against the document it judged by. Override `ref` to pin a
+# tag or a commit instead of tracking a branch.
+specs:
+  consumer:
+    repo: CycloneDX/transparency-exchange-api
+    ref: main
+    path: spec/openapi.yaml
+  publisher:
+    # Upstream publishes this at version 0.0.2, describing products, *leaves*
+    # and collections — an older TEA generation than the 0.4.0 consumption
+    # document beside it, and one no current server implements. The suite has a
+    # round-trip for it and reports the mismatch rather than failing a provider
+    # over it.
+    #
+    # To exercise the publication model that matches 0.4.0, point this at the
+    # proposed overlay instead:
+    #
+    #   repo: 0x73746F66/transparency-exchange-api
+    #   ref: main
+    #   path: spec/publisher/openapi.yaml
+    #   note: the publication overlay proposed for the 0.4.x object model
+    repo: CycloneDX/transparency-exchange-api
+    ref: main
+    path: spec/publisher/openapi.json
+  wellKnown:
+    repo: CycloneDX/transparency-exchange-api
+    ref: main
+    path: discovery/tea-well-known.schema.json
+  insights:
+    # The Insights specification is not yet part of the upstream repository.
+    # This is the branch it is proposed from; the note appears in every report
+    # so nobody mistakes it for a merged document.
+    repo: 0x73746F66/transparency-exchange-api
+    ref: insights
+    path: insights/openapi.json
+    note: >-
+      not yet upstream — proposed in CycloneDX/transparency-exchange-api and
+      fetched here from the proposing fork
+  spdx:
+    repo: spdx/license-list-data
+    ref: main
+    path: json/licenses.json
+
+output:
+  dir: reports
+  # One Markdown file per area, plus an index. Set false for a single document.
+  splitByArea: true
+  # Keep every response body. Turning this off makes the run unreproducible,
+  # and the report says so.
+  retainResponses: true
+
+# The areas to run, in the order they are listed in the README. Remove one here
+# to drop it for every provider, or use each provider's own `exclude`.
+areas:
+  - discovery
+  - consumer
+  - purl
+  - cyclonedx
+  - spdx
+  - insights
+  - cel
+  - provenance
+  - performance
+  - provider
+
+# Areas excluded for every provider.
+exclude: []
+
+performance:
+  # Requests per shape on a connection that has never been used. This is what a
+  # consumer's first contact actually costs.
+  coldSamples: 5
+  # Warm replays per shape.
+  iterations: 300
+  # In-flight requests during the warm replay.
+  concurrency: 32
+
+# The records the `provider` area creates. They are deterministic on purpose: a
+# re-run addresses the same objects, so the round-trip's delete cases clean up
+# both this run and anything an interrupted earlier run left behind. Change
+# runKey only if you need two suites writing to one catalogue at once.
+writeCycle:
+  namePrefix: owasp-tea-conformance
+  runKey: conformance-001
+  purlNamespace: pkg:generic/owasp-tea-conformance
+
+providers:
+  - name: vulnetix
+    # Discovery starts here: DNS, then https://<dns>/.well-known/tea, then the
+    # endpoint and version that document advertises.
+    dns: vulnetix.com
+    auth:
+      scheme: apikey
+      # Only the variable name lives in this file. Never the credential.
+      credentialEnv: TEA_VULNETIX_CREDENTIAL
+
+  # A second provider, showing the per-provider overrides. Uncomment and edit.
+  #
+  # - name: example
+  #   dns: products.example.com
+  #   auth:
+  #     scheme: bearer
+  #     credentialEnv: TEA_EXAMPLE_TOKEN
+  #   # This provider serves a read-only mirror, so skip the write round-trip.
+  #   exclude: [provider]
+  #   output:
+  #     dir: reports/example
+  #     splitByArea: false
+  #   # A shorter measurement against a provider you do not own.
+  #   performance:
+  #     iterations: 50
+  #     concurrency: 8
+  #   # Ask this provider about a different package set.
+  #   packages:
+  #     - pkg:npm/lodash
+  #     - pkg:pypi/requests
+  #
+  # A provider that publishes no discovery document can be addressed directly:
+  #
+  # - name: staging
+  #   dns: staging.example.com
+  #   rootUrl: https://staging.example.com/tea/v1
+  #   version: "0.4.0"
+  #   insightsUrl: https://staging.example.com/insights
+
+# The open-source sample every provider is asked about, as package URLs.
+#
+# This is the same 300-project set used for the original TEA conformance
+# testing, so results stay comparable across runs and across providers. No
+# provider is required to publish any of it: what the sample establishes is how
+# much of a known set a catalogue actually covers.
+packages:
+  - pkg:github/666OS/ClashMac
+  - pkg:github/aaddrick/claude-desktop-debian
+  - pkg:github/Achilng/floral-notepaper
+  - pkg:github/agentscope-ai/AgentTeams
+  - pkg:github/Alexays/Waybar
+  - pkg:github/alibaba/formily
+  - pkg:github/alibaba/MNN
+  - pkg:github/alibaba/spring-ai-alibaba
+  - pkg:github/alienator88/Pearcleaner
+  - pkg:github/Aliucord/Aliucord
+  - pkg:github/amzxyz/rime-wanxiang
+  - pkg:github/anchore/syft
+  - pkg:github/andersao/l5-repository
+  - pkg:github/ankitects/anki
+  - pkg:github/AnswerDotAI/fasthtml
+  - pkg:github/apache/airflow
+  - pkg:github/apache/dolphinscheduler
+  - pkg:github/apache/dubbo-go
+  - pkg:github/apache/echarts
+  - pkg:github/apache/openwhisk
+  - pkg:github/apernet/hysteria
+  - pkg:github/apple/container
+  - pkg:github/apple/containerization
+  - pkg:github/apple/foundationdb
+  - pkg:github/appwrite/appwrite
+  - pkg:github/APSL/react-native-keyboard-aware-scroll-view
+  - pkg:github/archtechx/tenancy
+  - pkg:github/aria2/aria2
+  - pkg:github/auth0/java-jwt
+  - pkg:github/aws/aws-cli
+  - pkg:github/azahar-emu/azahar
+  - pkg:github/azerothcore/azerothcore-wotlk
+  - pkg:github/bambulab/BambuStudio
+  - pkg:github/barvian/number-flow
+  - pkg:github/better-auth/better-auth
+  - pkg:github/beyondcode/laravel-websockets
+  - pkg:github/bigskysoftware/htmx
+  - pkg:github/bobthecow/psysh
+  - pkg:github/BornToBeRoot/NETworkManager
+  - pkg:github/calcom/cal.com
+  - pkg:github/camunda/camunda
+  - pkg:github/carbon-design-system/carbon
+  - pkg:github/cfug/dio
+  - pkg:github/chaitin/PandaWiki
+  - pkg:github/charmbracelet/huh
+  - pkg:github/ChilliCream/graphql-platform
+  - pkg:github/cisco/ChezScheme
+  - pkg:github/ClickHouse/ClickHouse
+  - pkg:github/cloudflare/cloudflared
+  - pkg:github/coaidev/coai
+  - pkg:github/cockroachdb/pebble
+  - pkg:github/Cocoanetics/DTCoreText
+  - pkg:github/compodoc/compodoc
+  - pkg:github/cppcheck-opensource/cppcheck
+  - pkg:github/crazycodeboy/react-native-splash-screen
+  - pkg:github/cubefs/cubefs
+  - pkg:github/dalance/procs
+  - pkg:github/data-privacy-stack/presidio
+  - pkg:github/daytonaio/daytona
+  - pkg:github/denoland/deno
+  - pkg:github/dgtlmoon/changedetection.io
+  - pkg:github/DietrichGebert/ponytail
+  - pkg:github/diggerhq/digger
+  - pkg:github/discord/discord-api-docs
+  - pkg:github/django-crispy-forms/django-crispy-forms
+  - pkg:github/doctrine/collections
+  - pkg:github/downshift-js/downshift
+  - pkg:github/dunglas/mercure
+  - pkg:github/EasyTier/EasyTier
+  - pkg:github/eggjs/egg
+  - pkg:github/eksctl-io/eksctl
+  - pkg:github/elastic/beats
+  - pkg:github/elazarl/goproxy
+  - pkg:github/elizaOS/eliza
+  - pkg:github/EndlessCheng/codeforces-go
+  - pkg:github/espressif/esp-idf
+  - pkg:github/ethereum-optimism/optimism
+  - pkg:github/extension-js/extension.js
+  - pkg:github/facebook/buck2
+  - pkg:github/fastapi/typer
+  - pkg:github/feathersjs/feathers
+  - pkg:github/Finsys/dockhand
+  - pkg:github/floci-io/floci
+  - pkg:github/fw876/helloworld
+  - pkg:github/fzaninotto/Faker
+  - pkg:github/github/github-mcp-server
+  - pkg:github/glushchenko/fsnotes
+  - pkg:github/godotengine/godot
+  - pkg:github/google/agents-cli
+  - pkg:github/google/cadvisor
+  - pkg:github/google/j2objc
+  - pkg:github/google/zx
+  - pkg:github/grafana/mimir
+  - pkg:github/grafana/pyroscope
+  - pkg:github/grpc-ecosystem/go-grpc-middleware
+  - pkg:github/grpc-ecosystem/grpc-gateway
+  - pkg:github/hacdias/webdav
+  - pkg:github/hadolint/hadolint
+  - pkg:github/hamcrest/hamcrest-php
+  - pkg:github/Hanson/vbot
+  - pkg:github/hashicorp/serf
+  - pkg:github/hashicorp/terraform
+  - pkg:github/hashicorp/terraform-provider-azurerm
+  - pkg:github/hatchet-dev/hatchet
+  - pkg:github/hexclave/hexclave
+  - pkg:github/heygen-com/hyperframes
+  - pkg:github/HIPS/autograd
+  - pkg:github/hrvach/deskhop
+  - pkg:github/hunvreus/basecoat
+  - pkg:github/hyperlight-dev/hyperlight
+  - pkg:github/iced-rs/iced
+  - pkg:github/imroc/req
+  - pkg:github/iOfficeAI/AionUi
+  - pkg:github/istio/istio
+  - pkg:github/itinance/react-native-fs
+  - pkg:github/JakeWharton/timber
+  - pkg:github/JCodesMore/ai-website-cloner-template
+  - pkg:github/jeffvli/feishin
+  - pkg:github/Jeric-X/SyncClipboard
+  - pkg:github/jhspetersson/fselect
+  - pkg:github/jindrapetrik/jpexs-decompiler
+  - pkg:github/jingyaogong/minimind
+  - pkg:github/jordanbaird/Ice
+  - pkg:github/jpillora/cloud-torrent
+  - pkg:github/jrouwe/JoltPhysics
+  - pkg:github/k2-fsa/sherpa-onnx
+  - pkg:github/ko-build/ko
+  - pkg:github/kubernetes-sigs/descheduler
+  - pkg:github/KunAgent/Kun
+  - pkg:github/labstack/echo
+  - pkg:github/langfuse/langfuse
+  - pkg:github/larastan/larastan
+  - pkg:github/laravel/framework
+  - pkg:github/laravel/socialite
+  - pkg:github/larksuite/cli
+  - pkg:github/layui/layui
+  - pkg:github/letta-ai/letta
+  - pkg:github/lewish/asciiflow
+  - pkg:github/linkedin/Liger-Kernel
+  - pkg:github/lissy93/web-check
+  - pkg:github/livewire/livewire
+  - pkg:github/longhorn/longhorn
+  - pkg:github/luanti-org/luanti
+  - pkg:github/luau-lang/luau
+  - pkg:github/ludwig-ai/ludwig
+  - pkg:github/madler/zlib
+  - pkg:github/mahmoud/boltons
+  - pkg:github/mailhog/MailHog
+  - pkg:github/manticoresoftware/manticoresearch
+  - pkg:github/MaterializeInc/materialize
+  - pkg:github/maxrave-dev/SimpMusic
+  - pkg:github/medialab/xan
+  - pkg:github/MHSanaei/3x-ui
+  - pkg:github/microsoft/markitdown
+  - pkg:github/microsoft/vcpkg
+  - pkg:github/microsoft/windows-rs
+  - pkg:github/mistralai/mistral-vibe
+  - pkg:github/mltframework/shotcut
+  - pkg:github/moby/moby
+  - pkg:github/mongodb/node-mongodb-native
+  - pkg:github/MontFerret/ferret
+  - pkg:github/mozilla/pdf.js
+  - pkg:github/MrLesk/Backlog.md
+  - pkg:github/mumble-voip/mumble
+  - pkg:github/mybatis/generator
+  - pkg:github/mybatis/mybatis-3
+  - pkg:github/nanomsg/nng
+  - pkg:github/NatronGitHub/Natron
+  - pkg:github/necolas/react-native-web
+  - pkg:github/networkx/networkx
+  - pkg:github/newmarcel/KeepingYouAwake
+  - pkg:github/nextcloud/server
+  - pkg:github/nextlevelbuilder/ui-ux-pro-max-skill
+  - pkg:github/nghttp2/nghttp2
+  - pkg:github/nilaoda/N_m3u8DL-RE
+  - pkg:github/noah-nuebling/mac-mouse-fix
+  - pkg:github/nocobase/nocobase
+  - pkg:github/nrwl/nx
+  - pkg:github/ntop/n2n
+  - pkg:github/numman-ali/openskills
+  - pkg:github/oceanbase/miniob
+  - pkg:github/omniauth/omniauth
+  - pkg:github/onyx-dot-app/onyx
+  - pkg:github/open-circle/valibot
+  - pkg:github/open-metadata/OpenMetadata
+  - pkg:github/open-multi-agent/open-multi-agent
+  - pkg:github/OpenRA/OpenRA
+  - pkg:github/openziti/zrok
+  - pkg:github/oramasearch/orama
+  - pkg:github/otter-sec/anchor
+  - pkg:github/PaddlePaddle/PaddleFormers
+  - pkg:github/pallets-eco/flask-sqlalchemy
+  - pkg:github/pentaho/pentaho-kettle
+  - pkg:github/peripheryapp/periphery
+  - pkg:github/pgmq/pgmq
+  - pkg:github/phpDocumentor/ReflectionDocBlock
+  - pkg:github/php-imagine/Imagine
+  - pkg:github/podman-container-tools/podman
+  - pkg:github/PowerShell/PowerShell
+  - pkg:github/prefix-dev/pixi
+  - pkg:github/prusa3d/PrusaSlicer
+  - pkg:github/purescript/purescript
+  - pkg:github/pwr-Solaar/Solaar
+  - pkg:github/pymupdf/PyMuPDF
+  - pkg:github/Querz/mcaselector
+  - pkg:github/QuestPDF/QuestPDF
+  - pkg:github/Radarr/Radarr
+  - pkg:github/rbenv/rbenv
+  - pkg:github/redis/redis-py
+  - pkg:github/redpanda-data/console
+  - pkg:github/refined-github/refined-github
+  - pkg:github/release-it/release-it
+  - pkg:github/remotion-dev/remotion
+  - pkg:github/replicate/cog
+  - pkg:github/rethinkdb/rethinkdb
+  - pkg:github/Ripple-TS/ripple
+  - pkg:github/risingwavelabs/risingwave
+  - pkg:github/rivet-dev/rivet
+  - pkg:github/router-for-me/CLIProxyAPI
+  - pkg:github/rowboatlabs/rowboat
+  - pkg:github/ruvnet/RuVector
+  - pkg:github/sahat/hackathon-starter
+  - pkg:github/SaladDay/cc-switch-cli
+  - pkg:github/samchon/typia
+  - pkg:github/score-spec/spec
+  - pkg:github/scrapy/scrapy
+  - pkg:github/sct/overseerr
+  - pkg:github/sebastianbergmann/code-unit-reverse-lookup
+  - pkg:github/sebastianbergmann/comparator
+  - pkg:github/sebastianbergmann/global-state
+  - pkg:github/sebastianbergmann/object-enumerator
+  - pkg:github/sebastianbergmann/object-reflector
+  - pkg:github/sebastianbergmann/php-code-coverage
+  - pkg:github/sebastianbergmann/php-file-iterator
+  - pkg:github/sebastianbergmann/php-timer
+  - pkg:github/secdev/scapy
+  - pkg:github/semgrep/semgrep
+  - pkg:github/shadowsocks/shadowsocks-go
+  - pkg:github/shipshapecode/tether
+  - pkg:github/Shopify/liquid
+  - pkg:github/simplecov-ruby/simplecov
+  - pkg:github/simulot/immich-go
+  - pkg:github/sindresorhus/got
+  - pkg:github/SixLabors/ImageSharp
+  - pkg:github/slint-ui/slint
+  - pkg:github/smallstep/cli
+  - pkg:github/smartystreets/goconvey
+  - pkg:github/SolaceLabs/solace-agent-mesh
+  - pkg:github/spacedriveapp/spacedrive
+  - pkg:github/spaceship-prompt/spaceship-prompt
+  - pkg:github/spf13/afero
+  - pkg:github/sqlalchemy/sqlalchemy
+  - pkg:github/sqldelight/sqldelight
+  - pkg:github/square/kotlinpoet
+  - pkg:github/statamic/cms
+  - pkg:github/steipete/summarize
+  - pkg:github/Stellarium/stellarium
+  - pkg:github/strapi/strapi
+  - pkg:github/strawberry-graphql/strawberry
+  - pkg:github/stripe/stripe-node
+  - pkg:github/sverweij/dependency-cruiser
+  - pkg:github/swc-project/swc
+  - pkg:github/symfony/console
+  - pkg:github/symfony/http-kernel
+  - pkg:github/symfony/polyfill-mbstring
+  - pkg:github/symfony/routing
+  - pkg:github/symfony/translation
+  - pkg:github/systemd/systemd
+  - pkg:github/Tautulli/Tautulli
+  - pkg:github/tobi/qmd
+  - pkg:github/tokio-rs/tracing
+  - pkg:github/Tracer-Cloud/opensre
+  - pkg:github/trifectatechfoundation/sudo-rs
+  - pkg:github/triton-inference-server/server
+  - pkg:github/ts1/BLEUnlock
+  - pkg:github/tymondesigns/jwt-auth
+  - pkg:github/typst/typst
+  - pkg:github/Uberi/speech_recognition
+  - pkg:github/udecode/plate
+  - pkg:github/Unitech/pm2
+  - pkg:github/vaibhavpandeyvpz/apkstudio
+  - pkg:github/ValveSoftware/GameNetworkingSockets
+  - pkg:github/ventoy/Ventoy
+  - pkg:github/vercel/commerce
+  - pkg:github/vercel/vercel
+  - pkg:github/VictoriaMetrics/VictoriaMetrics
+  - pkg:github/vlucas/phpdotenv
+  - pkg:github/vuejs/vitepress
+  - pkg:github/webdriverio/webdriverio
+  - pkg:github/web-infra-dev/modern.js
+  - pkg:github/webpro-nl/knip
+  - pkg:github/weidai11/cryptopp
+  - pkg:github/woocommerce/woocommerce
+  - pkg:github/XiaomiMiMo/MiMo-Code
+  - pkg:github/xpzouying/xiaohongshu-mcp
+  - pkg:github/Yeachan-Heo/oh-my-claudecode
+  - pkg:github/zauberzeug/nicegui
+  - pkg:github/zenorocha/clipboard.js
+  - pkg:github/zeroclaw-labs/zeroclaw
+  - pkg:github/zzzgydi/clash-verge

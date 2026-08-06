@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: true
+
+      - name: gofmt
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "not gofmt-clean:"; echo "$unformatted"; exit 1
+          fi
+
+      - run: go vet ./...
+
+      # The suite's own negative controls live here: a validator that accepted
+      # everything would produce the same green conformance report as a correct
+      # one, so these tests assert known-bad payloads are rejected.
+      - run: go test ./... -race
+
+      - run: go build ./...
+
+      # The configuration shipped in the repository must resolve. This makes no
+      # network requests and needs no credentials.
+      - run: go run ./cmd/tea-conformance --config config.example.yaml --plan
