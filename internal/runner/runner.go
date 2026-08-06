@@ -158,6 +158,7 @@ func Run(ctx context.Context, c *Client, api *spec.API, cases []Case, concurrenc
 	if concurrency < 1 {
 		concurrency = 8
 	}
+	alignMethods(api, cases)
 	results := make([]Result, len(cases))
 
 	// Compile every schema up front, single-threaded. The compiler caches into
@@ -195,10 +196,37 @@ func Run(ctx context.Context, c *Client, api *spec.API, cases []Case, concurrenc
 	return results
 }
 
+// alignMethods makes the specification authoritative for the HTTP method of any
+// case that names an operation.
+//
+// A case stating its own method is a second copy of something the document
+// already says, and the two drift. When they do, the provider answers 405 and
+// the report blames it for an operation it implemented exactly as specified.
+// That happened: the publisher document declares PUT for the two collection
+// operations and this suite sent POST, which then cascaded, because the artifact
+// that followed had no collection to belong to.
+//
+// A case that means to probe a method the document does not declare must not
+// claim the operation id, because it is not exercising that operation.
+func alignMethods(api *spec.API, cases []Case) {
+	if api == nil {
+		return
+	}
+	for i := range cases {
+		if cases[i].OperationID == "" {
+			continue
+		}
+		if method := api.Method(cases[i].OperationID); method != "" {
+			cases[i].Method = method
+		}
+	}
+}
+
 // RunSerial executes cases strictly in order, for flows where one case's
 // outcome decides the next. The publisher round-trip is the reason it exists:
 // an object has to exist before it can be read, revised and deleted.
 func RunSerial(ctx context.Context, c *Client, api *spec.API, cases []Case) []Result {
+	alignMethods(api, cases)
 	results := make([]Result, 0, len(cases))
 	for _, tc := range cases {
 		var entry any

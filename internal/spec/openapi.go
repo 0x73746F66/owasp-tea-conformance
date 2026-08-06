@@ -387,6 +387,16 @@ func (a *API) SuccessStatus(operationID string) (int, string) {
 	return best, op.StatusSchema[best]
 }
 
+// Method returns the HTTP method the document declares for an operation, or ""
+// when it declares no such operation.
+//
+// A case that names an operation must use this rather than stating a method of
+// its own. Getting it wrong produces a 405 from a provider that implemented the
+// operation correctly, and reads in the report as the provider's defect.
+func (a *API) Method(operationID string) string {
+	return a.Operation[operationID].Method
+}
+
 // Declares reports whether the document declares an operation at all. It is how
 // an area tells "this provider did not implement it" from "the specification
 // does not have it".

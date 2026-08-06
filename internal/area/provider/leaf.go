@@ -2,11 +2,10 @@ package provider
 
 // The older publication model.
 //
-// Upstream publishes spec/publisher/openapi.json at version 0.0.2, describing
-// products, *leaves* and collections. That is a TEA generation before the consumption
-// specification beside it, which is 0.4.0 and describes products, components
-// and releases. The two do not share an object model or a naming scheme, and a
-// server implementing either one is implementing a real published document.
+// The upstream main branch still carries spec/publisher/openapi.json at version
+// 0.0.2, describing products, *leaves* and collections. That is a TEA generation
+// before the 0.4.0 consumption specification and PR 147's matching publisher
+// specification. The models do not share an object model or naming scheme.
 //
 // So this file is the round-trip for the older model. It is deliberately
 // shorter than the newer one: the document declares thirteen operations rather

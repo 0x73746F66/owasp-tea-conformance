@@ -19,7 +19,7 @@ and checked offline.
 | Area | What it establishes |
 |---|---|
 | `discovery` | DNS resolves, `.well-known/tea` is HTTPS-only and schema-valid, endpoint and version selection follow SemVer and priority, TEIs resolve |
-| `consumer` | Every operation of the consumption API, through its success path, its declared error paths and its pagination rules |
+| `consumer` | Every operation of the consumption API, through its success path, declared errors and pagination, plus the draft artifact-retrieval trust profiles |
 | `purl` | Published package URLs parse, round-trip through the identifier filter, and resolve as purl-typed TEIs |
 | `cyclonedx` | The BOM documents behind the artifact records download, validate against the version each declares, and match their published checksums |
 | `spdx` | Licence identifiers in those documents and in lifecycle events are real, current, correctly-cased SPDX identifiers |
@@ -27,7 +27,7 @@ and checked offline.
 | `cel` | The server's idea of the query language matches `google/cel-go`, the reference implementation |
 | `provenance` | Checksum, signature and attestation coverage, and whatever attestations exist parse as in-toto statements |
 | `performance` | Cold latency and cached latency, measured and reported separately, with spread, plus correctness under concurrency |
-| `provider` | The publication API, as a create -> revise -> read-back -> delete round-trip |
+| `provider` | The publication API, as a create -> revise -> read-back -> delete round-trip, plus an informational publisher-workflow evidence map |
 
 Two things are reported alongside, and not as pass/fail. **Efficacy** is what
 the published graph actually contains: conformance cannot tell a complete
@@ -86,25 +86,18 @@ Fetched at the start of every run and written into that run's own directory, so
 a report is always checkable against the document it judged by. Change `specs.*.ref`
 to pin a tag or a commit instead of tracking a branch.
 
-Two things about the upstream set are worth knowing before you read a report,
-and both are disclosed in every report the suite writes:
+Two things about the specification set are worth knowing before you read a
+report, and both are disclosed in every report the suite writes:
 
-- **The publication document is a different generation from the consumption
-  one.** Upstream's `spec/openapi.yaml` is 0.4.0 and describes products,
-  components and releases; `spec/publisher/openapi.json` beside it is 0.0.2 and
-  describes products, *leaves* and collections. The suite detects which model a
-  document describes and runs the matching round-trip, so a server implementing
-  the current consumption API reports the publication operations as
-  not-implemented and not as failures. `config.example.yaml` shows how to
-  point `specs.publisher` at the publication overlay proposed for the 0.4.x
-  model instead.
+- **The publication document comes from [upstream PR 147][publisher-pr].** It is
+  generated from the 0.4.0 consumption specification plus a publication
+  overlay, so the publisher and consumer documents have the same version and
+  object model. The suite tracks `refs/pull/147/head` until that proposal is
+  merged upstream.
 - **The Insights specification is not upstream yet.** The example points at the
   branch it is proposed from, and every report says so next to the digest.
 
-The publication document also declares `components.responses` and
-`components.parameters` twice. JSON parsers keep the last definition, so the
-suite parses JSON documents with a JSON parser, as any client would, and
-reports the duplication instead of failing on it.
+[publisher-pr]: https://github.com/CycloneDX/transparency-exchange-api/pull/147
 
 ### The publication round-trip writes to your provider
 

@@ -48,12 +48,11 @@ type Record struct {
 // Model names which publication object model the fetched specification
 // describes.
 //
-// There are two in circulation, and they are not compatible. The document
-// upstream publishes at spec/publisher/openapi.json is version 0.0.2 and
-// describes products, *leaves* and collections; the consumption specification
-// beside it is 0.4.0 and describes products, components, releases and
-// collections. A suite that assumed either one would report a correct server as
-// broken, so the round-trip is chosen from what the document actually declares.
+// There are two in circulation, and they are not compatible. The shipped
+// configuration selects PR 147's 0.4.0 product / component / release model,
+// matching the consumption specification. The 0.0.2 document on the upstream
+// main branch describes products, *leaves* and collections. A configuration may
+// select either, so the round-trip is chosen from what the document declares.
 type Model string
 
 const (
@@ -479,12 +478,16 @@ func (f *flow) publishCollections() {
 			OperationID: "publishTeaComponentReleaseCollection",
 			Name:        "publish a collection for the component release",
 			Category:    "publication",
-			Method:      http.MethodPost,
-			Path:        "/componentRelease/" + f.componentReleaseUUID + "/collection",
-			Body:        body(map[string]any{"updateReason": reason}),
-			WantStatus:  status,
-			SchemaPtr:   schema,
-			Check:       requireCollectionIdentity(f.componentReleaseUUID, "COMPONENT_RELEASE"),
+			// PUT, not POST: the server assigns the version, so a publisher
+			// declares what the collection should now be rather than adding one.
+			// The runner takes the method from the document regardless, but a
+			// case that states the wrong one here still misleads a reader.
+			Method:     http.MethodPut,
+			Path:       "/componentRelease/" + f.componentReleaseUUID + "/collection",
+			Body:       body(map[string]any{"updateReason": reason}),
+			WantStatus: status,
+			SchemaPtr:  schema,
+			Check:      requireCollectionIdentity(f.componentReleaseUUID, "COMPONENT_RELEASE"),
 		})
 	}
 	if f.productReleaseUUID != "" {
@@ -493,7 +496,7 @@ func (f *flow) publishCollections() {
 			OperationID: "publishTeaProductReleaseCollection",
 			Name:        "publish a collection for the product release",
 			Category:    "publication",
-			Method:      http.MethodPost,
+			Method:      http.MethodPut,
 			Path:        "/productRelease/" + f.productReleaseUUID + "/collection",
 			Body:        body(map[string]any{"updateReason": reason}),
 			WantStatus:  status,

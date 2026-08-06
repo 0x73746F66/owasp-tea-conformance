@@ -20,22 +20,16 @@ specs:
     ref: main
     path: spec/openapi.yaml
   publisher:
-    # Upstream publishes this at version 0.0.2, describing products, *leaves*
-    # and collections, an older TEA generation than the 0.4.0 consumption
-    # document beside it, and one no current server implements. The suite has a
-    # round-trip for it and reports the mismatch instead of failing a provider
-    # over it.
-    #
-    # To exercise the publication model that matches 0.4.0, point this at the
-    # proposed overlay instead:
-    #
-    #   repo: 0x73746F66/transparency-exchange-api
-    #   ref: main
-    #   path: spec/publisher/openapi.yaml
-    #   note: the publication overlay proposed for the 0.4.x object model
+    # The 0.4.0 publisher document is proposed in upstream PR 147. It is
+    # generated from the 0.4.0 consumer document plus the publication overlay,
+    # so both sides use the same object model and version. Track the PR ref
+    # until it is merged upstream.
     repo: CycloneDX/transparency-exchange-api
-    ref: main
-    path: spec/publisher/openapi.json
+    ref: refs/pull/147/head
+    path: spec/publisher/openapi.yaml
+    note: >-
+      version 0.4.0 publisher specification proposed in
+      CycloneDX/transparency-exchange-api PR 147
   wellKnown:
     repo: CycloneDX/transparency-exchange-api
     ref: main
@@ -115,7 +109,15 @@ providers:
       # Only the variable name lives in this file. Never the credential.
       credentialEnv: TEA_VULNETIX_CREDENTIAL
 
-  # A second provider, showing the per-provider overrides. Uncomment and edit.
+  - name: rearm-demo
+    # This public demo exposes TEA 0.4.0 at a fixed root. Insights and
+    # publication writes are outside this provider's configured scope.
+    dns: demo.rearmhq.com
+    rootUrl: https://demo.rearmhq.com/tea/v0.4.0
+    version: "0.4.0"
+    exclude: [insights, provider]
+
+  # Another provider, showing the per-provider overrides. Uncomment and edit.
   #
   # - name: example
   #   dns: products.example.com

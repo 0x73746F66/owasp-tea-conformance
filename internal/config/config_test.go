@@ -260,6 +260,30 @@ func TestDefaultsFillEverySpecSource(t *testing.T) {
 	}
 }
 
+func TestConfiguredSpecSourceIsNotReplacedByDefaults(t *testing.T) {
+	cfg, err := Load(write(t, `
+version: 1
+specs:
+  publisher:
+    repo: example/alternative-specs
+    ref: refs/pull/42/head
+    path: api/publication.yaml
+providers:
+  - {name: a, dns: a.example}
+`))
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	want := SpecSource{
+		Repo: "example/alternative-specs",
+		Ref:  "refs/pull/42/head",
+		Path: "api/publication.yaml",
+	}
+	if got := cfg.Specs.Publisher; got != want {
+		t.Errorf("configured publisher source was changed: got %+v, want %+v", got, want)
+	}
+}
+
 func TestSlug(t *testing.T) {
 	for in, want := range map[string]string{
 		"vulnetix":             "vulnetix",

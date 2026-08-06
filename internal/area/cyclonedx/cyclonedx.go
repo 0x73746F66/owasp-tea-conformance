@@ -194,6 +194,12 @@ func fetchAndValidate(
 
 	if parsed, perr := cdx.ParseCDX(body); perr == nil && parsed != nil {
 		doc.Components = len(parsed.Components)
+	} else {
+		// The typed parser refuses a document that violates the schema, which is
+		// exactly the document whose contents a reader most wants described.
+		// Reporting 0 there says the BOM is empty when it is not, so count the
+		// array directly and let the violations above carry the verdict.
+		doc.Components = countComponents(body)
 	}
 
 	// Assertions the CycloneDX schema does not make but a consumer relies on.
@@ -206,6 +212,18 @@ func fetchAndValidate(
 
 	res.Pass = len(res.Errors) == 0
 	return doc, res
+}
+
+// countComponents reads the top-level components array without caring whether
+// the rest of the document is well-formed.
+func countComponents(body []byte) int {
+	var doc struct {
+		Components []json.RawMessage `json:"components"`
+	}
+	if err := json.Unmarshal(body, &doc); err != nil {
+		return 0
+	}
+	return len(doc.Components)
 }
 
 // looksLikeCycloneDX decides whether an artifact format is worth downloading as

@@ -268,8 +268,165 @@ func (r Report) consumerSection() string {
 	w("| TEI authority | `%s` |\n", dash(f.Authority))
 	w("\n")
 
+	w("%s", r.consumerArtifactRetrievalSection())
 	w("%s", r.efficacySection())
 	return b.String()
+}
+
+const consumerArtifactRetrievalURL = "https://github.com/oej/tea-trust-architecture/blob/" +
+	"main/tea-trust-arch/consumer/artifact-retrieval.md"
+
+// consumerArtifactRetrievalSection assesses the draft artifact-retrieval
+// profiles against evidence already collected by the consumer, CycloneDX and
+// provenance areas. The configured consumption OpenAPI remains the source of
+// the report's overall verdict; this separate table makes it explicit where a
+// provider has, and has not, demonstrated the draft trust-architecture profile.
+func (r Report) consumerArtifactRetrievalSection() string {
+	var b strings.Builder
+	w := func(format string, args ...any) { fmt.Fprintf(&b, format, args...) }
+
+	content := r.matchingRequestEvidence(func(res runner.Result) bool {
+		return res.OperationID == "artifactDownload"
+	})
+	metadata := r.matchingRequestEvidence(func(res runner.Result) bool {
+		return res.Area == config.AreaConsumer &&
+			(res.OperationID == "getLatestArtifact" || res.OperationID == "getArtifactByVersion")
+	})
+	signatures := r.matchingRequestEvidence(func(res runner.Result) bool {
+		return res.OperationID == "artifactSignature"
+	})
+	artifactErrors := consumerArtifactErrorEvidence(r.Results)
+
+	w("## Artifact retrieval and trust validation\n\n")
+	w("The [TEA Consumer API artifact-retrieval document](%s), version 1.0, describes a draft,\n",
+		consumerArtifactRetrievalURL)
+	w("normative profile layered over the consumption API. It distinguishes Base TEA from TEA\n")
+	w("with the Trust Architecture and from a high-assurance profile. The configured consumption\n")
+	w("OpenAPI remains the source of the overall verdict; this table reports the additional\n")
+	w("profile requirements separately. Because independent evidence-bundle retrieval is not\n")
+	w("exercised, this run does **not demonstrate conformance to the Trust Architecture profile**,\n")
+	w("even where Base TEA artifact retrieval succeeds.\n\n")
+	w("| Requirement or profile | Evidence from this run | Assessment |\n")
+	w("|---|---|---|\n")
+
+	baseEvidence := fmt.Sprintf("Artifact metadata: %s Artifact content: %s",
+		metadata.summary(), content.summary())
+	if r.Efficacy.Artifacts > 0 {
+		baseEvidence += fmt.Sprintf(" The sampled catalogue exposed a download URL for %d of %d artifacts.",
+			r.Efficacy.WithDownloadURL, r.Efficacy.Artifacts)
+	} else {
+		baseEvidence += " Catalogue-wide artifact URL coverage was not collected."
+	}
+	baseEvidence += " Content URLs were learned through collections; retrieval by artifact identity " +
+		"without first reading a collection was not probed."
+	baseAssessment := "not demonstrated"
+	if content.successful > 0 {
+		baseAssessment = "partially demonstrated"
+	}
+	w("| Base TEA: artifact retrieval (MUST) | %s | %s |\n", baseEvidence, baseAssessment)
+
+	signatureEvidence := fmt.Sprintf("The sampled catalogue exposed %d detached-signature URLs; %s ",
+		r.Efficacy.WithSignature, signatures.summary())
+	signatureEvidence += "Fetched signatures are not cryptographically verified and do not establish " +
+		"timestamp, transparency or long-term validity."
+	signatureAssessment := "not observed (optional)"
+	if signatures.successful > 0 {
+		signatureAssessment = "optional compatibility feature observed"
+	}
+	w("| Detached-signature retrieval (MAY) | %s | %s |\n",
+		signatureEvidence, signatureAssessment)
+
+	w("| Trust Architecture: independent evidence-bundle retrieval (MUST) | No conformance " +
+		"case in this run retrieved an evidence bundle independently of a collection or tied a " +
+		"bundle to the returned artifact. Attestation artifacts and detached signatures are not " +
+		"treated as substitutes for an evidence bundle. | not demonstrated |\n")
+
+	w("| Artifact plus evidence-bundle multipart retrieval (SHOULD) | This run did not negotiate " +
+		"`multipart/mixed; profile=\"artifact+evidence\"`, identify its two parts, or test artifact " +
+		"and bundle mismatch handling. | not assessed |\n")
+
+	validationEvidence := fmt.Sprintf("%d artifact-content responses were retrieved and %d passed "+
+		"their applicable document and digest checks.", content.successful, content.conforming)
+	if r.Efficacy.Artifacts > 0 {
+		validationEvidence += fmt.Sprintf(" %d of %d sampled artifact records carried a checksum.",
+			r.Efficacy.WithChecksum, r.Efficacy.Artifacts)
+	}
+	validationEvidence += " Certificate chains, timestamp evidence, transparency inclusion and local " +
+		"trust policy were not validated."
+	validationAssessment := "not demonstrated"
+	if content.conforming > 0 {
+		validationAssessment = "content integrity partially demonstrated"
+	}
+	w("| Validation behavior and transport-versus-trust semantics | %s | %s |\n",
+		validationEvidence, validationAssessment)
+
+	w("| Collection inclusion versus independent authenticity | Collection UUID and `belongsTo` " +
+		"rules are checked by the consumption cases. Artifact/evidence reuse across collections, " +
+		"and authenticity validation without a collection, are not exercised. | partially assessed |\n")
+
+	errorEvidence := fmt.Sprintf("%d artifact metadata error-path cases were exercised; %d conformed. ",
+		artifactErrors.attempted, artifactErrors.conforming)
+	errorEvidence += "The trust-profile errors for missing evidence, unsupported multipart profiles " +
+		"and artifact/evidence or artifact/signature mismatch were not exercised."
+	errorAssessment := "not assessed"
+	if artifactErrors.attempted > 0 {
+		errorAssessment = "base errors partially demonstrated"
+	}
+	w("| Error handling | %s | %s |\n", errorEvidence, errorAssessment)
+
+	w("| High-assurance profile | Bundle caching and reuse, offline validation, and operation " +
+		"without live timestamp or transparency services are outside this black-box run. | not assessed |\n\n")
+
+	return b.String()
+}
+
+type requestEvidence struct {
+	attempted  int
+	successful int
+	conforming int
+}
+
+func (r Report) matchingRequestEvidence(match func(runner.Result) bool) requestEvidence {
+	var out requestEvidence
+	for _, res := range r.Results {
+		if !match(res) {
+			continue
+		}
+		out.attempted++
+		if res.GotStatus >= 200 && res.GotStatus < 300 {
+			out.successful++
+		}
+		if res.Pass {
+			out.conforming++
+		}
+	}
+	return out
+}
+
+func (e requestEvidence) summary() string {
+	if e.attempted == 0 {
+		return "no matching request was exercised."
+	}
+	return fmt.Sprintf("%d requests were exercised, %d returned content successfully, and %d "+
+		"passed their applicable checks.", e.attempted, e.successful, e.conforming)
+}
+
+func consumerArtifactErrorEvidence(results []runner.Result) requestEvidence {
+	var out requestEvidence
+	for _, res := range results {
+		if res.Area != config.AreaConsumer || res.Category != "negative" ||
+			(res.OperationID != "getLatestArtifact" && res.OperationID != "getArtifactByVersion") {
+			continue
+		}
+		out.attempted++
+		if res.GotStatus >= 400 && res.GotStatus < 500 {
+			out.successful++
+		}
+		if res.Pass {
+			out.conforming++
+		}
+	}
+	return out
 }
 
 // efficacySection is what the published graph actually contains.
@@ -603,6 +760,7 @@ func (r Report) publisherSection() string {
 		if p.Detail != "" {
 			w("%s\n\n", p.Detail)
 		}
+		w("%s", r.publisherWorkflowSection())
 		return b.String()
 	}
 	if !p.Implemented {
@@ -612,6 +770,7 @@ func (r Report) publisherSection() string {
 		if p.Detail != "" {
 			w("- %s\n\n", p.Detail)
 		}
+		w("%s", r.publisherWorkflowSection())
 		return b.String()
 	}
 	w("The round-trip creates objects, revises them, reads them back through the consumption\n")
@@ -628,8 +787,186 @@ func (r Report) publisherSection() string {
 	if len(p.Unsupported) > 0 {
 		w("Operations this provider does not implement: `%s`\n\n", strings.Join(p.Unsupported, "`, `"))
 	}
+	w("%s", r.publisherWorkflowSection())
 	w("%s", r.residualTable())
 	return b.String()
+}
+
+const publisherWorkflowURL = "https://raw.githubusercontent.com/oej/tea-trust-architecture/" +
+	"refs/heads/main/tea-trust-arch/publisher/publisher-workflow.md"
+
+// publisherWorkflowSection maps the informational publisher workflow onto
+// evidence this black-box run actually collected. It deliberately does not
+// produce a second verdict: the workflow says the publisher OpenAPI document
+// is normative, and treating design guidance as a conformance requirement
+// would fail providers against rules the specification does not declare.
+func (r Report) publisherWorkflowSection() string {
+	var b strings.Builder
+	w := func(format string, args ...any) { fmt.Fprintf(&b, format, args...) }
+	p := r.Publisher
+
+	w("### Publisher workflow design\n\n")
+	w("The [TEA Trust Architecture publisher workflow](%s) is draft, informational design\n", publisherWorkflowURL)
+	w("guidance. The publication OpenAPI document remains the normative conformance source.\n")
+	w("This table maps the design to evidence collected by this run; its assessments do not\n")
+	w("change the conformance verdict.\n\n")
+	w("| Design concern | Evidence from this run | Assessment |\n")
+	w("|---|---|---|\n")
+
+	release := r.publisherOperationEvidence(
+		"createTeaComponentRelease", "createTeaProductRelease",
+		"publishTeaComponentReleaseCollection", "publishTeaProductReleaseCollection",
+	)
+	releaseEvidence := release.summary(4)
+	if p.Implemented && p.Model == pubarea.ModelRelease {
+		releaseEvidence += " Successful collection responses are checked against the stable " +
+			"release UUID and `belongsTo` value; publishing a later version against that same " +
+			"release is not exercised."
+	}
+	w("| Stable release identity | %s | %s |\n", releaseEvidence,
+		workflowAssessment(p, release, 4, "partially demonstrated"))
+
+	artifact := r.publisherOperationEvidence("createTeaArtifact", "uploadTeaArtifactContent")
+	artifactEvidence := artifact.summary(2)
+	if r.Efficacy.Artifacts > 0 {
+		artifactEvidence += fmt.Sprintf(" The sampled catalogue contained %d artifacts: %d carried a "+
+			"checksum and %d exposed a signature URL.", r.Efficacy.Artifacts,
+			r.Efficacy.WithChecksum, r.Efficacy.WithSignature)
+	} else {
+		artifactEvidence += " Catalogue-wide checksum and signature coverage was not collected."
+	}
+	artifactEvidence += " Signature integrity, certificate validity, timestamps, transparency " +
+		"inclusion and collection signatures are not cryptographically verified."
+	w("| Artifact preparation, signing and validation | %s | %s |\n", artifactEvidence,
+		workflowAssessment(p, artifact, 2, "partially demonstrated"))
+
+	collection := r.publisherOperationEvidence(
+		"publishTeaComponentReleaseCollection", "publishTeaProductReleaseCollection")
+	collectionEvidence := collection.summary(2)
+	if r.Efficacy.Collections > 0 {
+		collectionEvidence += fmt.Sprintf(" The sampled graph contained %d collections, %d empty, "+
+			"and %d referenced artifacts.", r.Efficacy.Collections,
+			r.Efficacy.EmptyCollections, r.Efficacy.Artifacts)
+	} else {
+		collectionEvidence += " No catalogue-wide collection inventory was collected."
+	}
+	collectionEvidence += " The round-trip does not prove that a collection was assembled from " +
+		"validated artifact digests or that the collection itself was signed."
+	w("| Collection assembly and signing | %s | %s |\n", collectionEvidence,
+		workflowAssessment(p, collection, 2, "partially demonstrated"))
+
+	w("| Preparation, separation of duties and approval | CI/CD preparation, publisher-side " +
+		"validation, human approval and separation of roles are internal controls that a " +
+		"black-box HTTP client cannot observe. | not assessed |\n")
+
+	commit := r.publisherOperationEvidence("getTeaProductByUuid", "getLatestArtifact")
+	commitEvidence := commit.summary(2) + " These read-backs test that accepted writes become " +
+		"visible through the consumption API. Atomic staging, a distinct commit boundary and DNS " +
+		"trust-anchor updates are not exercised."
+	commitAssessment := workflowAssessment(p, commit, 2, "partially demonstrated")
+	if p.Implemented && p.Model == pubarea.ModelRelease && commit.successful == 2 && commit.failed == 0 {
+		commitAssessment = "consumer visibility demonstrated"
+	}
+	w("| Commit and publication | %s | %s |\n", commitEvidence, commitAssessment)
+
+	versions := r.publisherOperationEvidence("updateTeaArtifact", "getLatestArtifact")
+	versionEvidence := versions.summary(2)
+	if r.Efficacy.Artifacts > 0 {
+		versionEvidence += fmt.Sprintf(" In the sampled catalogue, %d artifacts had more than one "+
+			"revision (deepest revision %d), and the deepest collection version was %d.",
+			r.Efficacy.MultiRevision, r.Efficacy.MaxRevision, r.Efficacy.MaxCollectionVersion)
+	} else {
+		versionEvidence += " Artifact and collection version depth was not inventoried."
+	}
+	versionEvidence += " The round-trip reads only `latest`; it does not re-fetch an older artifact, " +
+		"collection or CLE version to prove immutability and continued availability."
+	w("| Independent version streams, immutability and history | %s | %s |\n", versionEvidence,
+		workflowAssessment(p, versions, 2, "partially observed"))
+
+	cleEvidence := "The publication round-trip has no CLE or compliance-document publication case."
+	if hasArea(r.Areas, config.AreaSPDX) {
+		cleEvidence += fmt.Sprintf(" The read-side SPDX area inspected %d lifecycle documents, but "+
+			"did not create a new CLE version.", r.SPDX.CLERead)
+	} else {
+		cleEvidence += " The read-side SPDX/CLE area was not selected."
+	}
+	w("| CLE and compliance-document lifecycle | %s | not assessed |\n\n", cleEvidence)
+
+	return b.String()
+}
+
+type publisherOperationEvidence struct {
+	exercised  int
+	successful int
+	failed     int
+}
+
+func (r Report) publisherOperationEvidence(operationIDs ...string) publisherOperationEvidence {
+	wanted := make(map[string]bool, len(operationIDs))
+	for _, id := range operationIDs {
+		wanted[id] = true
+	}
+	seen := map[string]bool{}
+	successful := map[string]bool{}
+	failed := map[string]bool{}
+	for _, res := range r.Results {
+		if res.Area != config.AreaProvider || !wanted[res.OperationID] {
+			continue
+		}
+		seen[res.OperationID] = true
+		if res.Failed() {
+			failed[res.OperationID] = true
+		}
+		if res.Pass && res.GotStatus >= 200 && res.GotStatus < 300 {
+			successful[res.OperationID] = true
+		}
+	}
+	return publisherOperationEvidence{
+		exercised:  len(seen),
+		successful: len(successful),
+		failed:     len(failed),
+	}
+}
+
+func (e publisherOperationEvidence) summary(expected int) string {
+	if e.exercised == 0 {
+		return "No matching publication operation was exercised."
+	}
+	text := fmt.Sprintf("%d of %d relevant operations completed successfully", e.successful, expected)
+	if e.failed > 0 {
+		text += fmt.Sprintf("; %d had a conformance failure", e.failed)
+	}
+	return text + "."
+}
+
+func workflowAssessment(
+	p pubarea.Findings,
+	e publisherOperationEvidence,
+	expected int,
+	success string,
+) string {
+	if !p.Implemented || p.Model != pubarea.ModelRelease {
+		return "not assessed"
+	}
+	if e.failed > 0 {
+		return "not demonstrated"
+	}
+	if e.successful == expected {
+		return success
+	}
+	if e.exercised > 0 {
+		return "partially exercised"
+	}
+	return "not exercised"
+}
+
+func hasArea(areas []config.Area, want config.Area) bool {
+	for _, area := range areas {
+		if area == want {
+			return true
+		}
+	}
+	return false
 }
 
 // CatalogueMarkdown lists what this provider publishes.
