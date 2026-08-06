@@ -144,6 +144,13 @@ func Run(ctx context.Context, c *runner.Client, inv inventory.Inventory, concurr
 			AbsoluteURL: url,
 			WantStatus:  http.StatusOK,
 			Accept:      "application/json",
+			// TEA names no required format for an attestation, so the bytes are
+			// whatever the publisher chose.
+			AnyContentType: true,
+			// And for the same reason a document this suite cannot parse is a
+			// fact to report, not a conformance failure: it may be a perfectly
+			// valid attestation in a format the specification never named.
+			Optional: true,
 		})
 	}
 	attResults := runner.Run(ctx, c, nil, cases, concurrency)
@@ -226,15 +233,35 @@ func coverage(what string, have, total int, why string) runner.Result {
 	return res
 }
 
-// isAttestation recognises the artifact types that carry build provenance.
+// isAttestation recognises artifacts that carry a signed claim about a build.
+//
+// `BUILD_META` is deliberately not on the list. TEA uses it for build metadata,
+// and in practice that means the archived inputs — a go.mod, a Cargo.lock, a
+// workflow file, a pre-commit hook. Those are exactly what a publisher should
+// be publishing under that type, and treating them as attestations made the
+// suite demand an in-toto Statement of a lockfile and report a correctly-served
+// one as a failure.
+//
+// `FORMULATION` is likewise a description of how something was built rather
+// than a signed statement about it.
 func isAttestation(a inventory.Artifact) bool {
 	switch a.Type {
-	case "ATTESTATION", "BUILD_META", "FORMULATION", "CERTIFICATION":
+	case "ATTESTATION", "CERTIFICATION":
 		return true
 	}
-	name := strings.ToLower(a.Name)
-	return strings.Contains(name, "provenance") || strings.Contains(name, "slsa") ||
-		strings.Contains(name, "in-toto") || strings.Contains(name, "attestation")
+	// Outside those types, only an explicit signal counts. A name is weak
+	// evidence, so it has to name the format rather than merely mention the
+	// subject.
+	haystack := strings.ToLower(a.Name)
+	for _, f := range a.Formats {
+		haystack += " " + strings.ToLower(f.MediaType+" "+f.Description)
+	}
+	for _, marker := range []string{"in-toto", "slsa", "attestation", "provenance"} {
+		if strings.Contains(haystack, marker) {
+			return true
+		}
+	}
+	return false
 }
 
 // inspectAttestation parses whatever the publisher served and says what it is.

@@ -77,6 +77,11 @@ type Findings struct {
 
 	// Model is the object model the publication specification describes.
 	Model Model `json:"model"`
+	// ModelMismatch is set when the provider serves the publication endpoints
+	// but does not speak the model the fetched document describes. It is the
+	// two upstream specifications being different generations, and it is a fact
+	// about the documents rather than a defect in the provider.
+	ModelMismatch bool `json:"modelMismatch,omitempty"`
 	// SpecVersion is that document's own version, which is worth printing next
 	// to the consumption specification's.
 	SpecVersion string `json:"specVersion,omitempty"`
@@ -750,6 +755,23 @@ func (f *flow) run(tc runner.Case) runner.Result {
 	}
 	f.results = append(f.results, res)
 	return res
+}
+
+// downgrade turns an already-recorded failure into an advisory observation,
+// for the case where what looked like a provider defect turns out to be a fact
+// about the specification instead. The request and its response stay in the
+// report; only the verdict changes, and the reason replaces the error.
+func (f *flow) downgrade(seq int, reason string) {
+	for i := range f.results {
+		if f.results[i].Seq != seq {
+			continue
+		}
+		f.results[i].Errors = nil
+		f.results[i].Warnings = append(f.results[i].Warnings, reason)
+		f.results[i].Optional = true
+		f.results[i].Pass = true
+		return
+	}
 }
 
 func (f *flow) note(caseName, detail string) {

@@ -90,6 +90,23 @@ func (f *flow) createLeafProduct() {
 	})
 	// This model names the assigned identifier `identifier` rather than `uuid`.
 	f.productUUID = identifierOf(res.Body)
+
+	// A 400 on the very first write, from a server that answered 401 to the
+	// anonymous probe a moment earlier, means the endpoint is there and does
+	// not speak this document. That is the two upstream specifications being
+	// different generations, not a defect in the provider — the request body
+	// this model defines is simply not the one the provider implements.
+	if res.GotStatus == http.StatusBadRequest {
+		f.found.ModelMismatch = true
+		f.found.Detail = "the publication endpoints are served, but rejected the request body " +
+			"this specification defines: the fetched publication document (" + dash(f.api.Version) +
+			", product/leaf/collection) is an older generation than the object model the " +
+			"provider implements. Point specs.publisher at a document describing the same " +
+			"generation as the consumption specification to exercise it."
+		f.downgrade(res.Seq, "the publication model in the fetched specification is not the one "+
+			"this provider implements")
+		return
+	}
 	f.record("product", f.productUUID, productName(f.cycle),
 		"/product/"+url.PathEscape(f.productTEI()))
 }

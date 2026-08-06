@@ -224,23 +224,34 @@ func BuildCases(api *spec.API, f Fixtures) []runner.Case {
 	})
 
 	// ── Authentication ──────────────────────────────────────────────────────
-	// The specification declares bearer and basic security schemes for the whole
-	// API and declares no 401 body, so these are status-only assertions. They
-	// are skipped for a provider configured with no credential, where an open
-	// catalogue answering 200 is correct rather than a failure.
-	if f.RequiresAuth {
-		add(runner.Case{
-			OperationID: "queryTeaProducts", Name: "unauthenticated request is rejected",
-			Category: "security",
-			Path:     "/products", Auth: runner.NoAuth, WantStatus: 401,
-			AcceptStatus: []int{403},
-		}, runner.Case{
-			OperationID: "getTeaProductByUuid", Name: "unauthenticated object read is rejected",
-			Category: "security",
-			Path:     "/product/" + f.ProductUUID, Auth: runner.NoAuth, WantStatus: 401,
-			AcceptStatus: []int{403},
-		})
-	}
+	//
+	// The specification declares bearer and basic security schemes for the
+	// whole API, and declares no 401 body, so these are status-only. What it
+	// does *not* do is require every endpoint to be gated: a public catalogue
+	// served to anyone is a first-class TEA use case, and the whole point of the
+	// protocol is that a consumer can resolve a TEI without an agreement first.
+	//
+	// So these are advisory. They record whether anonymous access is refused,
+	// which is a genuinely useful thing for a report to say, without failing a
+	// provider for a deployment decision the specification leaves open.
+	add(runner.Case{
+		OperationID: "queryTeaProducts",
+		Name:        "anonymous listing is refused",
+		Category:    "security",
+		Path:        "/products", Auth: runner.NoAuth, WantStatus: 401,
+		AcceptStatus: []int{403},
+		Optional:     true,
+	}, runner.Case{
+		OperationID: "getTeaProductByUuid",
+		Name:        "anonymous object read is refused",
+		Category:    "security",
+		Path:        "/product/" + f.ProductUUID, Auth: runner.NoAuth, WantStatus: 401,
+		// 404 is the other correct answer: a server that does not disclose the
+		// existence of objects an anonymous caller may not read is behaving
+		// better than one that admits to them.
+		AcceptStatus: []int{403, 404},
+		Optional:     true,
+	})
 
 	return Number(cs, config.AreaConsumer, 1)
 }

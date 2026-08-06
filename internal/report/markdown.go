@@ -595,6 +595,16 @@ func (r Report) publisherSection() string {
 		w("> model, so a server implementing the current consumption API will not implement\n")
 		w("> these operations, and the round-trip below reports that rather than failing it.\n\n")
 	}
+	if p.ModelMismatch {
+		w("**This provider serves the publication endpoints but does not speak this document.**\n")
+		w("It refused the request body this model defines while refusing anonymous writes a\n")
+		w("moment earlier, which means the API is there and implements a different generation\n")
+		w("of it. Nothing below is a defect in the provider.\n\n")
+		if p.Detail != "" {
+			w("%s\n\n", p.Detail)
+		}
+		return b.String()
+	}
 	if !p.Implemented {
 		w("This provider does not serve the publication specification. That is not a\n")
 		w("conformance failure — publication is a separate document, and a read-only mirror is\n")

@@ -33,11 +33,10 @@ type Fixtures struct {
 	// domain a consumer started from.
 	Authority string `json:"authority"`
 
-	// RequiresAuth turns on the cases that assert an unauthenticated request is
-	// refused. It is set when the run holds a credential for this provider: an
-	// open catalogue answering 200 without one is correct, not a failure, and
-	// asserting otherwise would fail every public TEA server on the internet.
-	RequiresAuth bool `json:"requiresAuth"`
+	// Authenticated records whether the run held a credential for this
+	// provider, so a reader can tell a catalogue that is genuinely open from
+	// one this run simply had the key to.
+	Authenticated bool `json:"authenticated"`
 
 	// Counts observed while seeding, reported alongside the results so a reader
 	// can tell a green run over real data from a green run over none.

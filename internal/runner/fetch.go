@@ -52,6 +52,9 @@ func GetRaw(ctx context.Context, c *Client, area config.Area, seq int, name, abs
 		AbsoluteURL: absoluteURL,
 		Accept:      accept,
 		WantStatus:  http.StatusOK,
+		// The bytes behind an artifact are whatever the publisher stored. The
+		// caller judges them against whatever they are supposed to be.
+		AnyContentType: true,
 	}, nil)
 	return res.Body, res
 }

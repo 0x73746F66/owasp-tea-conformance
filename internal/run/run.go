@@ -177,7 +177,7 @@ func Provider(ctx context.Context, cfg *config.Config, p config.Resolved, opt Op
 
 	// ── Fixtures ────────────────────────────────────────────────────────────
 	fixtures, err := consumer.NewSeeder(client).Seed(ctx, p.DNS)
-	fixtures.RequiresAuth = client.Auth != ""
+	fixtures.Authenticated = client.Auth != ""
 	rep.Fixtures = fixtures
 	if err != nil {
 		rep.Errors = append(rep.Errors, "the object graph could not be seeded: "+err.Error())

@@ -98,6 +98,15 @@ type Case struct {
 	// provider non-conformant — an operation the specification does not
 	// require, or a document a publisher is free not to hold.
 	Optional bool
+
+	// AnyContentType turns off the application/json assertion.
+	//
+	// Every response the TEA specifications declare is JSON, so the default is
+	// to require it. An artifact download is the exception: the bytes behind an
+	// artifact are whatever the publisher stored — a lockfile, a shell script,
+	// a signature — and demanding JSON of them would report a correctly-served
+	// go.mod as a conformance failure.
+	AnyContentType bool
 }
 
 // Result is the outcome of one case.
@@ -310,8 +319,8 @@ func RunCase(ctx context.Context, c *Client, tc Case, schemaEntry any) Result {
 
 	// Content-Type is part of the contract: every declared response in the
 	// specification is application/json, and a client selects its parser from
-	// this header.
-	if ct := resp.Header.Get("Content-Type"); ct != "" && !isJSONContentType(ct) {
+	// this header. Artifact downloads opt out — see Case.AnyContentType.
+	if ct := resp.Header.Get("Content-Type"); !tc.AnyContentType && ct != "" && !isJSONContentType(ct) {
 		res.Errors = append(res.Errors, "Content-Type is not application/json: "+ct)
 	}
 
