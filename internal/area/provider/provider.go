@@ -206,12 +206,15 @@ func Run(
 	f.createComponent()
 	f.createComponentRelease()
 	f.createProductRelease()
+	f.updateChildren()
 
 	f.publishCollections()
 	f.createDistribution()
 	f.createArtifact()
 	f.uploadArtifact()
 	f.updateArtifact()
+	f.publisherListings()
+	f.publicationTargets()
 	f.accessPolicy()
 
 	f.finish()
@@ -472,6 +475,224 @@ func (f *flow) createProductRelease() {
 	f.productReleaseUUID = uuidOf(res.Body)
 	f.record("productRelease", f.productReleaseUUID, releaseVersion,
 		"/productRelease/"+f.productReleaseUUID)
+}
+
+// updateChildren revises the objects beneath the product.
+//
+// updateTeaProduct was already exercised and the other three were not, which
+// left the update path tested on exactly one of the four object kinds that
+// declare it. They are not interchangeable: a product is a container, while a
+// release carries the fields a consumer reads, so an update that works on one
+// says little about the others.
+//
+// Each case asserts the response carries the revised value rather than only a
+// success status. A server that accepts a PATCH and returns the object
+// unchanged has answered 200 and done nothing.
+func (f *flow) updateChildren() {
+	if f.componentUUID != "" && f.api.Declares("updateTeaComponent") {
+		want := componentName(f.cycle) + " (revised)"
+		status, schema := f.api.SuccessStatus("updateTeaComponent")
+		f.run(runner.Case{
+			OperationID: "updateTeaComponent",
+			Name:        "update the component",
+			Category:    "publication",
+			Method:      http.MethodPatch,
+			Path:        "/component/" + f.componentUUID,
+			Body:        body(map[string]any{"name": want}),
+			WantStatus:  status,
+			SchemaPtr:   schema,
+			Check:       requireUpdated("name", want),
+		})
+	}
+
+	// preRelease, because both creates set it true: flipping it to false is a
+	// change the response has to show, and unlike a name it cannot be satisfied
+	// by echoing back what was sent while storing nothing.
+	if f.componentReleaseUUID != "" && f.api.Declares("updateTeaComponentRelease") {
+		status, schema := f.api.SuccessStatus("updateTeaComponentRelease")
+		f.run(runner.Case{
+			OperationID: "updateTeaComponentRelease",
+			Name:        "update the component release",
+			Category:    "publication",
+			Method:      http.MethodPatch,
+			Path:        "/componentRelease/" + f.componentReleaseUUID,
+			Body:        body(map[string]any{"preRelease": false}),
+			WantStatus:  status,
+			SchemaPtr:   schema,
+			Check:       requireUpdated("preRelease", false),
+		})
+	}
+
+	if f.productReleaseUUID != "" && f.api.Declares("updateTeaProductRelease") {
+		status, schema := f.api.SuccessStatus("updateTeaProductRelease")
+		f.run(runner.Case{
+			OperationID: "updateTeaProductRelease",
+			Name:        "update the product release",
+			Category:    "publication",
+			Method:      http.MethodPatch,
+			Path:        "/productRelease/" + f.productReleaseUUID,
+			Body:        body(map[string]any{"preRelease": false}),
+			WantStatus:  status,
+			SchemaPtr:   schema,
+			Check:       requireUpdated("preRelease", false),
+		})
+	}
+}
+
+// publisherListings reads the catalogue back through the publication API's own
+// listings rather than the consumption API's.
+//
+// They answer a different question. The consumption listings show what a
+// consumer can reach; these show what the publisher holds, including the access
+// policy in force and a collection version, which is how a publisher finds a
+// release it created and never populated. A run that only ever read the
+// consumer side could not tell the two apart.
+func (f *flow) publisherListings() {
+	if f.api.Declares("listTeaPublications") {
+		status, schema := f.api.SuccessStatus("listTeaPublications")
+		f.run(runner.Case{
+			OperationID: "listTeaPublications",
+			Name:        "the publisher's own catalogue lists the product",
+			Category:    "publication",
+			Path:        "/publications",
+			Query:       url.Values{"pageSize": []string{"100"}},
+			WantStatus:  status,
+			SchemaPtr:   schema,
+			Check:       requireListedWhenComplete(f.productUUID),
+		})
+	}
+
+	if f.productUUID != "" && f.api.Declares("listTeaPublishedReleases") {
+		status, schema := f.api.SuccessStatus("listTeaPublishedReleases")
+		f.run(runner.Case{
+			OperationID: "listTeaPublishedReleases",
+			Name:        "the product's published releases are listed",
+			Category:    "publication",
+			Path:        "/publications/" + f.productUUID + "/releases",
+			Query:       url.Values{"pageSize": []string{"100"}},
+			WantStatus:  status,
+			SchemaPtr:   schema,
+			Check:       requireListedWhenComplete(f.productReleaseUUID),
+		})
+	}
+}
+
+// publicationTargetUUID is the identifier used to exercise the read and delete
+// of a target that was never registered. Constant, because a run that invented
+// one would address a different object every time and could not be reproduced
+// from its own recordings.
+const publicationTargetUUID = "6d4f2e0a-0000-4000-8000-00000000ffff"
+
+// publicationTargets exercises mirroring registration.
+//
+// Mirroring is optional: the specification declares 501 for every one of these
+// operations, so a server that does not mirror says so and is conformant. The
+// round-trip therefore accepts 501 throughout, and also accepts a refusal of
+// the target itself, since the specification asks a server to verify a target
+// before accepting it and the root named here is deliberately unreachable.
+// Refusing it is better behaviour than accepting it.
+//
+// The read and the delete run whether or not the create produced an object. An
+// operation that goes untested because an earlier optional step declined is
+// still untested, and a 404 for an absent target exercises the same handler.
+func (f *flow) publicationTargets() {
+	if !f.api.Declares("createTeaPublicationTarget") {
+		return
+	}
+	// 501 is what the specification declares for a server that does not mirror.
+	// 404 and 405 are what a server that simply has no such route answers, and
+	// treating that as a finding would report the absence of an optional feature
+	// as a defect. The suite already takes this line on artifact upload.
+	unsupported := []int{
+		http.StatusNotImplemented, http.StatusNotFound, http.StatusMethodNotAllowed,
+		// A server that verifies a target, as the specification asks, is
+		// entitled to reject one that does not answer.
+		http.StatusBadRequest, http.StatusUnprocessableEntity,
+	}
+
+	status, schema := f.api.SuccessStatus("createTeaPublicationTarget")
+	res := f.run(runner.Case{
+		OperationID: "createTeaPublicationTarget",
+		Name:        "register a publication target",
+		Category:    "publication",
+		Method:      http.MethodPost,
+		Path:        "/publicationTargets",
+		Body: body(map[string]any{
+			"rootUrl":     "https://tea.invalid/tea/v1",
+			"description": f.cycle.NamePrefix + " placeholder target " + f.cycle.RunKey,
+		}),
+		WantStatus:   status,
+		SchemaPtr:    schema,
+		AcceptStatus: unsupported,
+		Optional:     true,
+	})
+	targetUUID := uuidOf(res.Body)
+	if targetUUID != "" {
+		f.record("publicationTarget", targetUUID, "placeholder target",
+			"/publicationTargets/"+targetUUID)
+	}
+
+	if f.api.Declares("listTeaPublicationTargets") {
+		listStatus, listSchema := f.api.SuccessStatus("listTeaPublicationTargets")
+		f.run(runner.Case{
+			OperationID:  "listTeaPublicationTargets",
+			Name:         "list the registered publication targets",
+			Category:     "publication",
+			Path:         "/publicationTargets",
+			WantStatus:   listStatus,
+			SchemaPtr:    listSchema,
+			AcceptStatus: unsupported,
+			Optional:     true,
+		})
+	}
+
+	read := targetUUID
+	if read == "" {
+		read = publicationTargetUUID
+	}
+	if f.api.Declares("getTeaPublicationTarget") {
+		getStatus, getSchema := f.api.SuccessStatus("getTeaPublicationTarget")
+		want, ptr := getStatus, getSchema
+		accept := unsupported
+		if targetUUID == "" {
+			want, ptr = http.StatusNotFound, f.api.Status("getTeaPublicationTarget", 404)
+		}
+		f.run(runner.Case{
+			OperationID:  "getTeaPublicationTarget",
+			Name:         "read the publication target",
+			Category:     "publication",
+			Path:         "/publicationTargets/" + read,
+			WantStatus:   want,
+			SchemaPtr:    ptr,
+			AcceptStatus: accept,
+			Optional:     true,
+			// A credential is write-only: a server that returns it has published
+			// the secret to everyone who can read the target.
+			Check: refuseCredentialEcho,
+		})
+	}
+
+	if f.api.Declares("deleteTeaPublicationTarget") {
+		want := f.successStatus("deleteTeaPublicationTarget", http.StatusNoContent)
+		accept := []int{http.StatusNotImplemented, http.StatusNotFound}
+		if targetUUID == "" {
+			want = http.StatusNotFound
+		}
+		res := f.run(runner.Case{
+			OperationID:  "deleteTeaPublicationTarget",
+			Name:         "deregister the publication target",
+			Category:     "publication",
+			Method:       http.MethodDelete,
+			Path:         "/publicationTargets/" + read,
+			WantStatus:   want,
+			AcceptStatus: accept,
+			Optional:     true,
+		})
+		if targetUUID != "" {
+			f.markDeleted("publicationTarget", res.GotStatus,
+				res.GotStatus == want || res.GotStatus == http.StatusNotFound)
+		}
+	}
 }
 
 func (f *flow) publishCollections() {
@@ -891,6 +1112,15 @@ func uuidOf(payload []byte) string {
 	if id := runner.AsString(v, "uuid"); id != "" {
 		return id
 	}
+	// A distribution names its identifier `distributionId`, not `uuid`, which is
+	// what the consumption schema calls it. Looking only for `uuid` meant the
+	// created distribution was never recorded: its delete never ran, and the
+	// residual report said nothing was left behind while one object was left
+	// behind on every run. Only a cascading delete of the parent release kept
+	// that from accumulating.
+	if id := runner.AsString(v, "distributionId"); id != "" {
+		return id
+	}
 	// A create that answers with the object wrapped under its own type still
 	// carries the identifier a caller needs.
 	for _, key := range []string{"product", "component", "release", "artifact", "distribution"} {
@@ -933,6 +1163,93 @@ func requireCollectionIdentity(releaseUUID, belongsTo string) func([]byte) error
 		}
 		return nil
 	}
+}
+
+// requireUpdated checks that an update's response carries the value it wrote.
+//
+// Compared as JSON rather than by type, so one helper serves a string field and
+// a boolean one without the caller having to say which it is.
+func requireUpdated(field string, want any) func([]byte) error {
+	return func(payload []byte) error {
+		var v map[string]any
+		if err := json.Unmarshal(payload, &v); err != nil {
+			return fmt.Errorf("decode: %w", err)
+		}
+		got, ok := v[field]
+		if !ok {
+			return fmt.Errorf("the update's response carries no %q, so there is nothing to "+
+				"show the write was applied", field)
+		}
+		gotJSON, _ := json.Marshal(got)
+		wantJSON, _ := json.Marshal(want)
+		if string(gotJSON) != string(wantJSON) {
+			return fmt.Errorf("the update set %s to %s, but the response carries %s; the write "+
+				"was accepted and not applied", field, wantJSON, gotJSON)
+		}
+		return nil
+	}
+}
+
+func identifies(o map[string]any, uuid string) bool {
+	return runner.AsString(o, "uuid") == uuid
+}
+
+// requireListedWhenComplete checks that a listing contains an object, but only
+// when the listing is complete.
+//
+// A publisher with more objects than one page holds is not failed for paging:
+// absence from page one of many says nothing. Asserting only on a complete page
+// keeps the check honest rather than making it flaky on a large catalogue.
+func requireListedWhenComplete(uuid string) func([]byte) error {
+	return func(payload []byte) error {
+		if uuid == "" {
+			return nil
+		}
+		var v struct {
+			HasNext bool             `json:"hasNext"`
+			Results []map[string]any `json:"results"`
+		}
+		if err := json.Unmarshal(payload, &v); err != nil {
+			return fmt.Errorf("decode: %w", err)
+		}
+		for _, r := range v.Results {
+			if identifies(r, uuid) {
+				return nil
+			}
+			// The publisher listings wrap the object rather than being it: a
+			// publication carries `product`, a published release carries
+			// `release`, each alongside the policy in force and a count. The
+			// uuid a caller holds is the wrapped object's, not the row's.
+			for _, nested := range r {
+				if m, ok := nested.(map[string]any); ok && identifies(m, uuid) {
+					return nil
+				}
+			}
+		}
+		if v.HasNext {
+			return nil
+		}
+		return fmt.Errorf("the listing is complete at %d object(s) and does not contain %s, "+
+			"which this run published through the same API", len(v.Results), uuid)
+	}
+}
+
+// refuseCredentialEcho fails a publication target that returns its credential.
+//
+// The schema marks it writeOnly and the prose says a server MUST NOT return it,
+// nor report whether one is held in any form that distinguishes one credential
+// from another. A schema check alone would not catch this: writeOnly is not a
+// constraint a validator enforces on a response.
+func refuseCredentialEcho(payload []byte) error {
+	var v map[string]any
+	if err := json.Unmarshal(payload, &v); err != nil {
+		return fmt.Errorf("decode: %w", err)
+	}
+	if _, ok := v["credential"]; ok {
+		return fmt.Errorf("the target's response carries `credential`, which the specification " +
+			"marks write-only and says a server MUST NOT return")
+	}
+	return nil
 }
 
 // requireCollectionHolds checks that a collection lists the artifact published
